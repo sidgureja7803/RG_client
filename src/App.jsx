@@ -8,6 +8,7 @@ import { getCurrentUser } from './features/auth/authSlice';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import OAuthCallback from './pages/OAuthCallback';
 import Dashboard from './pages/Dashboard';
 import ResumeEditor from './pages/ResumeEditor';
 import Templates from './pages/Templates';
@@ -31,6 +32,35 @@ const theme = createTheme({
       main: '#f50057',
     },
   },
+  typography: {
+    fontFamily: [
+      'Inter',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      '"Segoe UI"',
+      'Roboto',
+      '"Helvetica Neue"',
+      'Arial',
+      'sans-serif',
+    ].join(','),
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+        },
+      },
+    },
+  },
 });
 
 const App = () => {
@@ -49,6 +79,7 @@ const App = () => {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/oauth-callback" element={<OAuthCallback />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<PrivateRoute element={<Dashboard />} />} />

@@ -1,25 +1,48 @@
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import api from './api';
 
 const authService = {
-  async login(email, password) {
-    const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+  async register(userData) {
+    const response = await api.post('/auth/register', userData);
     return response.data;
   },
 
-  async register(username, email, password) {
-    const response = await axios.post(`${API_URL}/auth/register`, { username, email, password });
+  async verifyEmail(userId, otp) {
+    const response = await api.post('/auth/verify-email', { userId, otp });
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
+    return response.data;
+  },
+
+  async resendOTP(userId) {
+    const response = await api.post('/auth/resend-otp', { userId });
+    return response.data;
+  },
+
+  async login(credentials) {
+    const response = await api.post('/auth/login', credentials);
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
     return response.data;
   },
 
   async getCurrentUser() {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await api.get('/auth/me');
     return response.data;
   },
+
+  logout() {
+    localStorage.removeItem('token');
+  },
+
+  getToken() {
+    return localStorage.getItem('token');
+  },
+
+  isLoggedIn() {
+    return !!this.getToken();
+  }
 };
 
 export default authService; 
