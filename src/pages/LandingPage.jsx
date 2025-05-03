@@ -29,16 +29,56 @@ const LandingPage = () => {
     });
     renderer.setSize(window.innerWidth > 768 ? 500 : window.innerWidth - 40, 400);
     
-    // Create document object
-    const geometry = new THREE.BoxGeometry(5, 7, 0.2);
-    const material = new THREE.MeshBasicMaterial({ 
-      color: '#4361ee',
-      transparent: true,
-      opacity: 0.8,
-      wireframe: true
+    // Create a more complex document object
+    const pageGeometry = new THREE.BoxGeometry(5, 7, 0.2);
+    const pageMaterial = new THREE.MeshStandardMaterial({ 
+      color: '#ffffff',
+      metalness: 0.1,
+      roughness: 0.5,
+      side: THREE.DoubleSide
     });
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
+    const page = new THREE.Mesh(pageGeometry, pageMaterial);
+    scene.add(page);
+    
+    // Add wireframe overlay
+    const wireframeGeometry = new THREE.BoxGeometry(5.1, 7.1, 0.3);
+    const wireframeMaterial = new THREE.MeshBasicMaterial({
+      color: '#4361ee',
+      wireframe: true,
+      transparent: true,
+      opacity: 0.7
+    });
+    const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+    scene.add(wireframe);
+    
+    // Add decorative elements
+    const lineGeometry = new THREE.BoxGeometry(4, 0.1, 0.1);
+    const lineMaterial = new THREE.MeshBasicMaterial({ color: '#f72585' });
+    
+    // Create multiple lines for resume elements
+    for (let i = 0; i < 5; i++) {
+      const line = new THREE.Mesh(lineGeometry, lineMaterial);
+      line.position.y = 2.5 - (i * 1.2);
+      line.position.z = 0.15;
+      page.add(line);
+    }
+    
+    // Add a header-like element
+    const headerGeometry = new THREE.BoxGeometry(4, 0.8, 0.1);
+    const headerMaterial = new THREE.MeshBasicMaterial({ color: '#7209b7' });
+    const header = new THREE.Mesh(headerGeometry, headerMaterial);
+    header.position.y = 3;
+    header.position.z = 0.15;
+    page.add(header);
+    
+    // Add ambient light
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    
+    // Add directional light for shadows
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
     
     // Position camera
     camera.position.z = 10;
@@ -47,9 +87,12 @@ const LandingPage = () => {
     const animate = () => {
       requestAnimationFrame(animate);
       
-      // Rotate document
-      cube.rotation.x += 0.005;
-      cube.rotation.y += 0.008;
+      // More subtle rotation
+      page.rotation.x = Math.sin(Date.now() * 0.001) * 0.1;
+      page.rotation.y = Math.sin(Date.now() * 0.0015) * 0.15 + 0.2;
+      
+      wireframe.rotation.x = page.rotation.x;
+      wireframe.rotation.y = page.rotation.y;
       
       renderer.render(scene, camera);
     };
@@ -68,8 +111,14 @@ const LandingPage = () => {
     return () => {
       window.removeEventListener('resize', handleResize);
       // Clean up Three.js resources
-      geometry.dispose();
-      material.dispose();
+      pageGeometry.dispose();
+      pageMaterial.dispose();
+      wireframeGeometry.dispose();
+      wireframeMaterial.dispose();
+      lineGeometry.dispose();
+      lineMaterial.dispose();
+      headerGeometry.dispose();
+      headerMaterial.dispose();
       renderer.dispose();
     };
   }, []);
@@ -107,6 +156,37 @@ const LandingPage = () => {
       duration: 1.5,
       delay: 0.2,
       ease: "power3.out"
+    });
+    
+    // Animated shapes
+    gsap.to(".animated-shape-1", {
+      y: -30,
+      x: 20,
+      rotation: 10,
+      duration: 15,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut"
+    });
+    
+    gsap.to(".animated-shape-2", {
+      y: 30,
+      x: -20,
+      rotation: -10,
+      duration: 12,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut"
+    });
+    
+    gsap.to(".animated-shape-3", {
+      y: -20,
+      x: 10,
+      rotation: 5,
+      duration: 10,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut"
     });
     
     // Features animations
@@ -197,6 +277,11 @@ const LandingPage = () => {
       
       {/* Hero Section */}
       <section className="hero-section" ref={heroRef}>
+        {/* Animated background shapes */}
+        <div className="animated-shape animated-shape-1"></div>
+        <div className="animated-shape animated-shape-2"></div>
+        <div className="animated-shape animated-shape-3"></div>
+        
         <div className="container">
           <div className="hero-content">
             <div className="hero-text">
@@ -221,6 +306,7 @@ const LandingPage = () => {
       
       {/* Features Section */}
       <section className="features-section" id="features" ref={featuresRef}>
+        <div className="animated-shape animated-shape-3"></div>
         <div className="container">
           <div className="section-header">
             <h2>Powerful Features</h2>
@@ -341,6 +427,7 @@ const LandingPage = () => {
       
       {/* Testimonials Section */}
       <section className="testimonials-section" id="testimonials">
+        <div className="animated-shape animated-shape-2"></div>
         <div className="container">
           <div className="section-header">
             <h2>Success Stories</h2>
