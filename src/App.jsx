@@ -6,7 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import store from './features/store';
 
 // Pages
-import Landing from './pages/Landing';
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import OAuthCallback from './pages/OAuthCallback';
@@ -15,6 +15,7 @@ import Profile from './pages/Profile';
 import ResumeEditor from './pages/ResumeEditor';
 import Templates from './pages/Templates';
 import NotFound from './pages/NotFound';
+import ResumeAnalyzerPage from './pages/ResumeAnalyzerPage';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -74,9 +75,9 @@ const App = () => {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <Router>
-          <Routes>
+          <Routes>  
             {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
@@ -119,6 +120,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Templates />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resume-analyzer"
+              element={
+                <ProtectedRoute>
+                  <ResumeAnalyzerPage />
                 </ProtectedRoute>
               }
             />

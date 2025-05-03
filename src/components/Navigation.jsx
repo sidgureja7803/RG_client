@@ -25,6 +25,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import { logout } from '../features/auth/authSlice';
 
 const Navigation = () => {
@@ -55,6 +56,7 @@ const Navigation = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Templates', icon: <DescriptionIcon />, path: '/templates' },
+    { text: 'Resume Analyzer', icon: <AnalyticsIcon />, path: '/resume-analyzer' },
   ];
 
   const drawer = (
