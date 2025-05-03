@@ -1,30 +1,42 @@
 import React, { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { loginSuccess } from '../features/auth/authSlice';
-import { CircularProgress, Box, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
+import { loginWithGoogle, loginWithGithub } from '../features/auth/authSlice';
 
 const OAuthCallback = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const token = params.get('token');
-    const error = params.get('error');
+    const handleCallback = async () => {
+      const provider = searchParams.get('provider');
+      const code = searchParams.get('code');
+      const token = searchParams.get('token');
+      const error = searchParams.get('error');
 
-    if (token) {
-      // Store token and update auth state
-      localStorage.setItem('token', token);
-      dispatch(loginSuccess({ token }));
-      navigate('/dashboard');
-    } else if (error) {
-      navigate('/login', { state: { error } });
-    } else {
-      navigate('/login');
-    }
-  }, [location, dispatch, navigate]);
+      if (error) {
+        console.error('OAuth Error:', error);
+        navigate('/login');
+        return;
+      }
+
+      try {
+        if (provider === 'google' && token) {
+          await dispatch(loginWithGoogle(token));
+        } else if (provider === 'github' && code) {
+          await dispatch(loginWithGithub(code));
+        }
+        navigate('/dashboard');
+      } catch (err) {
+        console.error('Authentication Error:', err);
+        navigate('/login');
+      }
+    };
+
+    handleCallback();
+  }, [dispatch, navigate, searchParams]);
 
   return (
     <Box
@@ -36,9 +48,9 @@ const OAuthCallback = () => {
         justifyContent: 'center',
       }}
     >
-      <CircularProgress />
-      <Typography variant="h6" sx={{ mt: 2 }}>
-        Processing authentication...
+      <CircularProgress size={48} sx={{ mb: 3 }} />
+      <Typography variant="h6" color="text.secondary">
+        Completing authentication...
       </Typography>
     </Box>
   );

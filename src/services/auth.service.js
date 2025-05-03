@@ -1,48 +1,57 @@
 import api from './api';
 
-const authService = {
+class AuthService {
+  async login(email, password) {
+    const response = await api.post('/auth/login', { email, password });
+    return response.data;
+  }
+
   async register(userData) {
     const response = await api.post('/auth/register', userData);
     return response.data;
-  },
+  }
 
-  async verifyEmail(userId, otp) {
-    const response = await api.post('/auth/verify-email', { userId, otp });
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-    }
+  async loginWithGoogle(token) {
+    const response = await api.post('/auth/google', { token });
     return response.data;
-  },
+  }
 
-  async resendOTP(userId) {
-    const response = await api.post('/auth/resend-otp', { userId });
+  async loginWithGithub(code) {
+    const response = await api.post('/auth/github', { code });
     return response.data;
-  },
+  }
 
-  async login(credentials) {
-    const response = await api.post('/auth/login', credentials);
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-    }
+  async verifyEmail(token) {
+    const response = await api.post('/auth/verify-email', { token });
     return response.data;
-  },
+  }
 
-  async getCurrentUser() {
-    const response = await api.get('/auth/me');
+  async forgotPassword(email) {
+    const response = await api.post('/auth/forgot-password', { email });
     return response.data;
-  },
+  }
+
+  async resetPassword(token, password) {
+    const response = await api.post('/auth/reset-password', { token, password });
+    return response.data;
+  }
+
+  async updateProfile(userData) {
+    const response = await api.put('/auth/profile', userData);
+    return response.data;
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    const response = await api.put('/auth/change-password', {
+      currentPassword,
+      newPassword
+    });
+    return response.data;
+  }
 
   logout() {
     localStorage.removeItem('token');
-  },
-
-  getToken() {
-    return localStorage.getItem('token');
-  },
-
-  isLoggedIn() {
-    return !!this.getToken();
   }
-};
+}
 
-export default authService; 
+export default new AuthService(); 

@@ -1,120 +1,193 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { register, verifyEmail, resendOTP, resetAuthError } from '../features/auth/authSlice';
-import gsap from 'gsap';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Box,
-  Button,
   Container,
-  TextField,
-  Typography,
   Paper,
-  Link,
-  Alert,
+  Typography,
+  TextField,
+  Button,
   Stepper,
   Step,
   StepLabel,
+  Alert,
+  CircularProgress
 } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import authService from '../services/auth.service';
+
+const steps = ['Account Details', 'Personal Information', 'Verification'];
 
 const Register = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [activeStep, setActiveStep] = useState(0);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    otp: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    verificationCode: ''
   });
-  const [userId, setUserId] = useState(null);
-  const [passwordError, setPasswordError] = useState('');
-  const { username, email, password, confirmPassword, otp } = formData;
-  
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
-
-  // Refs for GSAP animations
-  const formRef = useRef(null);
-  const titleRef = useRef(null);
-  const stepperRef = useRef(null);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    }
-    return () => {
-      dispatch(resetAuthError());
-    };
-  }, [isAuthenticated, navigate, dispatch]);
-
-  useEffect(() => {
-    // GSAP animations
-    const tl = gsap.timeline();
-    
-    tl.from(titleRef.current, {
-      y: -50,
-      opacity: 0,
-      duration: 0.8,
-      ease: 'power3.out'
-    })
-    .from(stepperRef.current, {
-      y: 30,
-      opacity: 0,
-      duration: 0.8,
-      ease: 'power3.out'
-    }, '-=0.4')
-    .from(formRef.current, {
-      y: 50,
-      opacity: 0,
-      duration: 0.8,
-      ease: 'power3.out'
-    }, '-=0.4');
-  }, []);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: e.target.value
     });
-    
-    if (e.target.name === 'confirmPassword' || e.target.name === 'password') {
-      if (e.target.name === 'confirmPassword' && e.target.value !== password) {
-        setPasswordError('Passwords do not match');
-      } else if (e.target.name === 'password' && e.target.value !== confirmPassword) {
-        setPasswordError('Passwords do not match');
-      } else {
-        setPasswordError('');
-      }
-    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleNext = async () => {
     if (activeStep === 0) {
-      if (password !== confirmPassword) {
-        setPasswordError('Passwords do not match');
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
         return;
       }
-      const resultAction = await dispatch(register({ username, email, password }));
-      if (register.fulfilled.match(resultAction)) {
-        setUserId(resultAction.payload.userId);
-        setActiveStep(1);
+      // Validate first step
+      if (!formData.email || !formData.password || !formData.confirmPassword) {
+        setError('Please fill in all fields');
+        return;
       }
-    } else {
-      const resultAction = await dispatch(verifyEmail({ userId, otp }));
-      if (verifyEmail.fulfilled.match(resultAction)) {
-        navigate('/dashboard');
+    } else if (activeStep === 1) {
+      // Validate second step
+      if (!formData.firstName || !formData.lastName) {
+        setError('Please fill in all required fields');
+        return;
       }
+    } else if (activeStep === 2) {
+      // Submit registration
+      try {
+        setLoading(true);
+        setError('');
+        await authService.register({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone,
+          verificationCode: formData.verificationCode
+        });
+        navigate('/login');
+      } catch (err) {
+        setError(err.response?.data?.message || 'Registration failed');
+      } finally {
+        setLoading(false);
+      }
+      return;
     }
+    setActiveStep((prev) => prev + 1);
+    setError('');
   };
 
-  const handleResendOTP = async () => {
-    await dispatch(resendOTP(userId));
+  const handleBack = () => {
+    setActiveStep((prev) => prev - 1);
+    setError('');
+  };
+
+  const getStepContent = (step) => {
+    switch (step) {
+      case 0:
+        return (
+          <Box>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="Email Address"
+              name="email"
+              autoComplete="email"
+              value={formData.email}
+              onChange={handleChange}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="Password"
+              type="password"
+              id="password"
+              value={formData.password}
+              onChange={handleChange}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="confirmPassword"
+              label="Confirm Password"
+              type="password"
+              id="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+            />
+          </Box>
+        );
+      case 1:
+        return (
+          <Box>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="firstName"
+              label="First Name"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleChange}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="lastName"
+              label="Last Name"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+            />
+            <TextField
+              margin="normal"
+              fullWidth
+              id="phone"
+              label="Phone Number"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+            />
+          </Box>
+        );
+      case 2:
+        return (
+          <Box>
+            <Typography variant="body1" gutterBottom>
+              Please check your email for the verification code.
+            </Typography>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="verificationCode"
+              label="Verification Code"
+              name="verificationCode"
+              value={formData.verificationCode}
+              onChange={handleChange}
+            />
+          </Box>
+        );
+      default:
+        return 'Unknown step';
+    }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="sm">
       <Box
         sx={{
           marginTop: 8,
@@ -123,135 +196,61 @@ const Register = () => {
           alignItems: 'center',
         }}
       >
-        <Paper
-          elevation={3}
-          sx={{
-            padding: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
-            background: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(10px)',
-          }}
-        >
-          <Typography ref={titleRef} component="h1" variant="h5" sx={{ mb: 3 }}>
+        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+          <Typography component="h1" variant="h4" align="center" gutterBottom>
             Create Account
           </Typography>
 
-          <Stepper ref={stepperRef} activeStep={activeStep} sx={{ width: '100%', mb: 4 }}>
-            <Step>
-              <StepLabel>Register</StepLabel>
-            </Step>
-            <Step>
-              <StepLabel>Verify Email</StepLabel>
-            </Step>
+          <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
           </Stepper>
-          
+
           {error && (
-            <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+            <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
 
-          <Box ref={formRef} component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-            {activeStep === 0 ? (
-              <>
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  id="username"
-                  label="Username"
-                  name="username"
-                  autoComplete="username"
-                  autoFocus
-                  value={username}
-                  onChange={handleChange}
-                />
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  id="email"
-                  label="Email Address"
-                  name="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={handleChange}
-                />
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="password"
-                  label="Password"
-                  type="password"
-                  id="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={handleChange}
-                />
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="confirmPassword"
-                  label="Confirm Password"
-                  type="password"
-                  id="confirmPassword"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={handleChange}
-                  error={!!passwordError}
-                  helperText={passwordError}
-                />
-              </>
-            ) : (
-              <>
-                <Typography variant="body1" sx={{ mb: 2, textAlign: 'center' }}>
-                  Please enter the verification code sent to your email
-                </Typography>
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="otp"
-                  label="Verification Code"
-                  id="otp"
-                  value={otp}
-                  onChange={handleChange}
-                  inputProps={{ maxLength: 6 }}
-                />
-                <Button
-                  type="button"
-                  fullWidth
-                  variant="text"
-                  onClick={handleResendOTP}
-                  sx={{ mt: 1 }}
-                >
-                  Resend Code
-                </Button>
-              </>
-            )}
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading || (activeStep === 0 && !!passwordError)}
-            >
-              {loading ? 'Processing...' : activeStep === 0 ? 'Continue' : 'Verify & Sign In'}
-            </Button>
-            <Box sx={{ textAlign: 'center' }}>
-              <Link 
-                component="button"
-                variant="body2"
-                onClick={() => navigate('/login')}
+          <Box component="form" sx={{ mt: 1 }}>
+            {getStepContent(activeStep)}
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+              <Button
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                sx={{ mr: 1 }}
               >
-                Already have an account? Sign In
-              </Link>
+                Back
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                disabled={loading}
+              >
+                {loading ? (
+                  <CircularProgress size={24} />
+                ) : activeStep === steps.length - 1 ? (
+                  'Complete Registration'
+                ) : (
+                  'Next'
+                )}
+              </Button>
             </Box>
+          </Box>
+
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body2" color="text.secondary" align="center">
+              Already have an account?{' '}
+              <Link to="/login" style={{ textDecoration: 'none' }}>
+                <Typography component="span" color="primary">
+                  Sign in
+                </Typography>
+              </Link>
+            </Typography>
           </Box>
         </Paper>
       </Box>

@@ -1,196 +1,300 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { login, resetAuthError } from '../features/auth/authSlice';
-import gsap from 'gsap';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Box,
-  Button,
   Container,
-  TextField,
-  Typography,
   Paper,
-  Link,
-  Alert,
+  Typography,
+  TextField,
+  Button,
   Divider,
+  Alert,
+  CircularProgress,
+  Stack,
+  IconButton,
+  InputAdornment,
+  useTheme,
 } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import { login } from '../features/auth/authSlice';
 
 const Login = () => {
+  const theme = useTheme();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { loading, error } = useSelector((state) => state.auth);
+
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
+    password: ''
   });
-  const { email, password } = formData;
-  
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
-
-  // Refs for GSAP animations
-  const formRef = useRef(null);
-  const titleRef = useRef(null);
-  const socialRef = useRef(null);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    }
-    return () => {
-      dispatch(resetAuthError());
-    };
-  }, [isAuthenticated, navigate, dispatch]);
-
-  useEffect(() => {
-    // GSAP animations
-    const tl = gsap.timeline();
-    
-    tl.from(titleRef.current, {
-      y: -50,
-      opacity: 0,
-      duration: 0.8,
-      ease: 'power3.out'
-    })
-    .from(formRef.current, {
-      y: 50,
-      opacity: 0,
-      duration: 0.8,
-      ease: 'power3.out'
-    }, '-=0.4')
-    .from(socialRef.current, {
-      y: 50,
-      opacity: 0,
-      duration: 0.8,
-      ease: 'power3.out'
-    }, '-=0.4');
-  }, []);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: e.target.value
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch(login({ email, password }));
+    const result = await dispatch(login(formData));
+    if (!result.error) {
+      navigate('/dashboard');
+    }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
   };
 
   const handleGithubLogin = () => {
-    window.location.href = `${process.env.REACT_APP_API_URL}/auth/github`;
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
+        py: 4,
+      }}
+    >
+      <Container component="main" maxWidth="sm">
         <Paper
-          elevation={3}
+          elevation={24}
           sx={{
-            padding: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
+            p: { xs: 3, md: 6 },
+            borderRadius: 4,
+            backdropFilter: 'blur(20px)',
             background: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(10px)',
           }}
         >
-          <Typography ref={titleRef} component="h1" variant="h5" sx={{ mb: 3 }}>
-            Welcome Back
-          </Typography>
-          
-          {error && (
-            <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
-              {error}
-            </Alert>
-          )}
-
-          <Box ref={socialRef} sx={{ width: '100%', mb: 3 }}>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<GoogleIcon />}
-              onClick={handleGoogleLogin}
-              sx={{ mb: 2 }}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
+            <Typography
+              component="h1"
+              variant="h4"
+              gutterBottom
+              sx={{ fontWeight: 700 }}
             >
-              Continue with Google
-            </Button>
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<GitHubIcon />}
-              onClick={handleGithubLogin}
-            >
-              Continue with GitHub
-            </Button>
-          </Box>
-
-          <Divider sx={{ width: '100%', mb: 3 }}>
-            <Typography variant="body2" color="text.secondary">
-              OR
+              Welcome Back
             </Typography>
-          </Divider>
-
-          <Box ref={formRef} component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={handleChange}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={handleChange}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              align="center"
+              sx={{ mb: 4 }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </Button>
-            <Box sx={{ textAlign: 'center' }}>
-              <Link 
-                component="button"
-                variant="body2"
-                onClick={() => navigate('/register')}
+              Sign in to continue building your professional resume
+            </Typography>
+
+            {error && (
+              <Alert
+                severity="error"
+                sx={{
+                  mb: 3,
+                  width: '100%',
+                  borderRadius: 2,
+                }}
               >
-                Don't have an account? Sign Up
-              </Link>
+                {error}
+              </Alert>
+            )}
+
+            <Stack spacing={2} sx={{ width: '100%', mb: 3 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                size="large"
+                onClick={handleGoogleLogin}
+                startIcon={<GoogleIcon />}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2,
+                  borderColor: 'divider',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'primary.light',
+                  },
+                }}
+              >
+                Continue with Google
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                size="large"
+                onClick={handleGithubLogin}
+                startIcon={<GitHubIcon />}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2,
+                  borderColor: 'divider',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: 'primary.light',
+                  },
+                }}
+              >
+                Continue with GitHub
+              </Button>
+            </Stack>
+
+            <Divider sx={{ width: '100%', mb: 3 }}>
+              <Typography color="text.secondary" variant="body2">
+                OR
+              </Typography>
+            </Divider>
+
+            <Box
+              component="form"
+              onSubmit={handleSubmit}
+              sx={{ width: '100%' }}
+            >
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="email"
+                label="Email Address"
+                name="email"
+                autoComplete="email"
+                autoFocus
+                value={formData.email}
+                onChange={handleChange}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  },
+                }}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="password"
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                autoComplete="current-password"
+                value={formData.password}
+                onChange={handleChange}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() => setShowPassword(!showPassword)}
+                        edge="end"
+                      >
+                        {showPassword ? (
+                          <VisibilityOffIcon />
+                        ) : (
+                          <VisibilityIcon />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  },
+                }}
+              />
+
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                size="large"
+                disabled={loading}
+                sx={{
+                  mt: 3,
+                  mb: 2,
+                  py: 1.5,
+                  borderRadius: 2,
+                  position: 'relative',
+                }}
+              >
+                {loading ? (
+                  <CircularProgress
+                    size={24}
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      marginTop: '-12px',
+                      marginLeft: '-12px',
+                    }}
+                  />
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mt: 2 }}
+              >
+                <Link
+                  to="/forgot-password"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <Typography
+                    variant="body2"
+                    color="primary"
+                    sx={{
+                      '&:hover': {
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    Forgot password?
+                  </Typography>
+                </Link>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Don't have an account?{' '}
+                    <Link
+                      to="/register"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <Typography
+                        component="span"
+                        color="primary"
+                        sx={{
+                          fontWeight: 500,
+                          '&:hover': {
+                            textDecoration: 'underline',
+                          },
+                        }}
+                      >
+                        Sign up
+                      </Typography>
+                    </Link>
+                  </Typography>
+                </Box>
+              </Stack>
             </Box>
           </Box>
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 
