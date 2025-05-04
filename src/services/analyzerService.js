@@ -3,6 +3,8 @@
  * This service provides algorithms and utilities for comparing resumes against 
  * job descriptions and providing ATS optimization recommendations.
  */
+import api from './api';
+import { formatDate } from '../utils/dateUtils';
 
 // Natural language processing utilities
 const nlp = {
@@ -120,126 +122,213 @@ const nlp = {
 /**
  * Analyze resume against a job description
  * @param {Object} resumeData - Resume data 
- * @param {Object} jobData - Job description data
+ * @param {string} jobDescription - Job description text
  * @returns {Object} Analysis results
  */
-export const analyzeResume = async (resumeData, jobData) => {
-  // In a real implementation, this might make an API call to a backend service
-  
+export const analyzeResume = async (resumeData, jobDescription) => {
   try {
-    // For demo purposes, we'll simulate the analysis with a brief delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Extract combined text from resume sections
-    const resumeText = Object.values(resumeData.sections || {})
-      .map(section => section.content || '')
-      .join(' ');
-    
-    // Get job description text
-    const jobText = jobData.description || '';
-    
-    // Extract keywords from job description
-    const jobKeywords = nlp.extractKeywords(jobText);
-    
-    // Extract keywords from resume
-    const resumeKeywords = nlp.extractKeywords(resumeText);
-    
-    // Find matching keywords
-    const matchedKeywords = jobKeywords
-      .filter(keyword => resumeKeywords.includes(keyword))
-      .map(text => {
-        // Determine importance based on frequency in job description
-        const count = jobText.toLowerCase().split(text).length - 1;
-        let importance = 'low';
-        if (count >= 5) importance = 'high';
-        else if (count >= 2) importance = 'medium';
-        
-        // Determine category
-        const categorized = nlp.categorizeKeywords([text]);
-        const category = Object.keys(categorized)[0] || 'Other';
-        
-        return { text, importance, category };
-      });
-    
-    // Find missing keywords
-    const missingKeywords = jobKeywords
-      .filter(keyword => !resumeKeywords.includes(keyword))
-      .map(text => {
-        // Determine importance based on frequency in job description
-        const count = jobText.toLowerCase().split(text).length - 1;
-        let importance = 'low';
-        if (count >= 5) importance = 'high';
-        else if (count >= 2) importance = 'medium';
-        
-        // Determine category
-        const categorized = nlp.categorizeKeywords([text]);
-        const category = Object.keys(categorized)[0] || 'Other';
-        
-        return { text, importance, category };
-      });
-      
-    // Calculate match score
-    const keywordMatchPercent = matchedKeywords.length > 0
-      ? Math.round((matchedKeywords.length / (matchedKeywords.length + missingKeywords.length)) * 100)
-      : 0;
-    
-    // Calculate section-specific scores
-    const sectionScores = {};
-    for (const [sectionName, section] of Object.entries(resumeData.sections || {})) {
-      sectionScores[sectionName] = nlp.calculateSimilarity(section.content, jobText);
+    if (!resumeData || !resumeData.id) {
+      throw new Error('Resume data is required with a valid ID');
     }
+
+    // Check if we're in development or testing mode with no backend
+    if (process.env.REACT_APP_USE_MOCK_DATA || !api.defaults.baseURL) {
+      return getMockAnalysisResult(resumeData, jobDescription);
+    }
+
+    // Make API call to get analysis
+    const response = await api.post('/analyzer/analyze-with-job', {
+      resumeId: resumeData.id,
+      jobDescription
+    });
     
-    // Generate section recommendations
-    const sectionRecommendations = generateSectionRecommendations(resumeData, jobData, sectionScores);
-    
-    // Generate metrics
-    const metrics = [
-      {
-        name: 'Keyword Match Rate',
-        value: `${keywordMatchPercent}%`,
-        description: 'Percentage of job keywords found in your resume',
-        icon: '🔍'
-      },
-      {
-        name: 'ATS Compatibility',
-        value: `${calculateATSScore(resumeData, matchedKeywords.length)}%`,
-        description: 'How well your resume will perform in ATS systems',
-        icon: '🤖'
-      },
-      {
-        name: 'Missing Keywords',
-        value: missingKeywords.length,
-        description: 'Number of important keywords not found in your resume',
-        icon: '❗'
-      },
-      {
-        name: 'Strongest Section',
-        value: findStrongestSection(sectionScores),
-        description: 'Your resume section with the highest relevance',
-        icon: '🏆'
-      }
-    ];
-    
-    // Generate overall suggestions
-    const overallSuggestions = generateOverallSuggestions(
-      resumeData, 
-      jobData,
-      matchedKeywords,
-      missingKeywords
-    );
-    
-    return {
-      matchScore: keywordMatchPercent,
-      matchedKeywords,
-      missingKeywords,
-      metrics,
-      sectionRecommendations,
-      overallSuggestions
-    };
+    return response.data;
   } catch (error) {
-    console.error('Resume analysis error:', error);
-    throw new Error('Failed to analyze resume');
+    console.error('Error analyzing resume:', error);
+    throw new Error('Failed to analyze resume. Please try again.');
   }
+};
+
+/**
+ * Get analysis history for the user
+ * @returns {Array} History of analyses
+ */
+export const getAnalysisHistory = async () => {
+  try {
+    // Check if we're in development or testing mode with no backend
+    if (process.env.REACT_APP_USE_MOCK_DATA || !api.defaults.baseURL) {
+      return getMockAnalysisHistory();
+    }
+
+    const response = await api.get('/analyzer/history');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching analysis history:', error);
+    throw new Error('Failed to fetch analysis history. Please try again.');
+  }
+};
+
+/**
+ * Save an analysis result
+ * @param {string} resumeId - Resume ID
+ * @param {Object} analysisResult - Analysis result
+ * @param {string} jobDescription - Job description
+ * @returns {Object} Success message and ID
+ */
+export const saveAnalysisResult = async (resumeId, analysisResult, jobDescription) => {
+  try {
+    // Check if we're in development or testing mode with no backend
+    if (process.env.REACT_APP_USE_MOCK_DATA || !api.defaults.baseURL) {
+      return { message: 'Analysis saved successfully (mock)', analysisId: 'mock-id' };
+    }
+
+    const response = await api.post('/analyzer/save', {
+      resumeId,
+      analysisResult,
+      jobDescription
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error saving analysis result:', error);
+    throw new Error('Failed to save analysis result. Please try again.');
+  }
+};
+
+// Mock data generation for development and testing
+const getMockAnalysisResult = (resumeData, jobDescription) => {
+  // For demo purposes, we'll simulate the analysis with a brief delay
+  return new Promise(resolve => {
+    setTimeout(() => {
+      // Extract combined text from resume sections
+      const resumeText = Object.values(resumeData.sections || {})
+        .map(section => section.content || '')
+        .join(' ');
+      
+      // Extract keywords from job description
+      const jobKeywords = nlp.extractKeywords(jobDescription);
+      
+      // Extract keywords from resume
+      const resumeKeywords = nlp.extractKeywords(resumeText);
+      
+      // Find matching keywords
+      const matchedKeywords = jobKeywords
+        .filter(keyword => resumeKeywords.includes(keyword))
+        .map(text => {
+          // Determine importance based on frequency in job description
+          const count = jobDescription.toLowerCase().split(text).length - 1;
+          let importance = 'low';
+          if (count >= 5) importance = 'high';
+          else if (count >= 2) importance = 'medium';
+          
+          // Determine category
+          const categorized = nlp.categorizeKeywords([text]);
+          const category = Object.keys(categorized)[0] || 'Other';
+          
+          return { text, importance, category };
+        });
+      
+      // Find missing keywords
+      const missingKeywords = jobKeywords
+        .filter(keyword => !resumeKeywords.includes(keyword))
+        .map(text => {
+          // Determine importance based on frequency in job description
+          const count = jobDescription.toLowerCase().split(text).length - 1;
+          let importance = 'low';
+          if (count >= 5) importance = 'high';
+          else if (count >= 2) importance = 'medium';
+          
+          // Determine category
+          const categorized = nlp.categorizeKeywords([text]);
+          const category = Object.keys(categorized)[0] || 'Other';
+          
+          return { text, importance, category };
+        });
+        
+      // Calculate match score
+      const keywordMatchPercent = matchedKeywords.length > 0
+        ? Math.round((matchedKeywords.length / (matchedKeywords.length + missingKeywords.length)) * 100)
+        : 0;
+      
+      // Calculate section-specific scores
+      const sectionScores = {};
+      for (const [sectionName, section] of Object.entries(resumeData.sections || {})) {
+        sectionScores[sectionName] = nlp.calculateSimilarity(section.content, jobDescription);
+      }
+      
+      // Generate section recommendations
+      const sectionRecommendations = {
+        summary: "Consider tailoring your summary to highlight skills specifically mentioned in the job description. Keep it concise and impactful.",
+        experience: "Focus on achievements rather than responsibilities. Quantify your impact with metrics where possible.",
+        skills: "Ensure your skills section includes the key technical skills mentioned in the job description. Organize them by category for better readability.",
+        education: "List your most recent education first. Include relevant coursework or projects if you're a recent graduate."
+      };
+      
+      // Generate metrics
+      const metrics = [
+        {
+          name: 'Keyword Match Rate',
+          value: `${keywordMatchPercent}%`,
+          description: 'Percentage of job keywords found in your resume'
+        },
+        {
+          name: 'ATS Compatibility',
+          value: `${calculateATSScore(resumeData, matchedKeywords.length)}%`,
+          description: 'How well your resume will perform in Applicant Tracking Systems'
+        },
+        {
+          name: 'Content Quality',
+          value: '78%',
+          description: 'Assessment of your resume\'s content effectiveness'
+        },
+        {
+          name: 'Formatting Score',
+          value: '85%',
+          description: 'How well your resume is structured and formatted'
+        }
+      ];
+      
+      // Generate overall suggestions
+      const overallSuggestions = [
+        "Tailor your resume specifically to this job description by highlighting relevant experience and skills.",
+        "Use industry-specific terminology and keywords found in the job listing.",
+        "Ensure your achievements are quantified with numbers when possible (e.g., 'increased sales by 20%').",
+        "Keep formatting consistent and easy to scan for an ATS system.",
+        "Consider adding a brief professional summary that aligns with the job requirements."
+      ];
+      
+      resolve({
+        matchScore: keywordMatchPercent,
+        atsScore: calculateATSScore(resumeData, matchedKeywords.length),
+        matchedKeywords,
+        missingKeywords,
+        sectionRecommendations,
+        overallSuggestions,
+        metrics
+      });
+    }, 2000);
+  });
+};
+
+const getMockAnalysisHistory = () => {
+  return [
+    {
+      _id: 'history1',
+      resumeId: '12345',
+      resumeTitle: 'Software Engineer Resume',
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      matchScore: 75,
+      atsScore: 82
+    },
+    {
+      _id: 'history2',
+      resumeId: '12345',
+      resumeTitle: 'Software Engineer Resume',
+      timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+      matchScore: 68,
+      atsScore: 75
+    }
+  ];
 };
 
 /**
@@ -249,244 +338,24 @@ export const analyzeResume = async (resumeData, jobData) => {
  * @returns {number} ATS score between 0-100
  */
 const calculateATSScore = (resumeData, matchedKeywordsCount) => {
-  // In a real implementation, this would be more sophisticated
-  // For now, we'll use a simple formula
+  const baseScore = 65; // Start with a base score
+  let bonusPoints = 0;
   
-  const hasProperFormatting = true; // Assume proper formatting
-  const hasProperSections = Object.keys(resumeData.sections || {}).length >= 4;
-  const hasContactInfo = true; // Assume contact info is present
-  
-  let score = 50; // Base score
-  
-  // Add points for matched keywords
-  score += Math.min(matchedKeywordsCount * 2, 30);
-  
-  // Add points for proper formatting
-  if (hasProperFormatting) score += 10;
-  
-  // Add points for proper sections
-  if (hasProperSections) score += 5;
-  
-  // Add points for contact info
-  if (hasContactInfo) score += 5;
-  
-  return Math.min(score, 100);
-};
-
-/**
- * Find the strongest section in a resume based on scores
- * @param {Object} sectionScores - Scores for each section
- * @returns {string} Name of strongest section
- */
-const findStrongestSection = (sectionScores) => {
-  if (Object.keys(sectionScores).length === 0) return 'None';
-  
-  let highestScore = 0;
-  let strongestSection = '';
-  
-  for (const [sectionName, score] of Object.entries(sectionScores)) {
-    if (score > highestScore) {
-      highestScore = score;
-      strongestSection = sectionName;
+  // Bonus for having key sections
+  const sections = Object.keys(resumeData.sections || {});
+  const keySections = ['summary', 'experience', 'education', 'skills'];
+  keySections.forEach(section => {
+    if (sections.some(s => s.toLowerCase().includes(section))) {
+      bonusPoints += 5;
     }
-  }
-  
-  // Format the section name for better readability
-  return strongestSection
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, str => str.toUpperCase())
-    .trim();
-};
-
-/**
- * Generate overall suggestions for resume improvement
- * @param {Object} resumeData - Resume data
- * @param {Object} jobData - Job description data
- * @param {Array} matchedKeywords - Matched keywords
- * @param {Array} missingKeywords - Missing keywords
- * @returns {Array} Suggestions for resume improvement
- */
-const generateOverallSuggestions = (resumeData, jobData, matchedKeywords, missingKeywords) => {
-  const suggestions = [];
-  
-  // Suggest adding high-importance missing keywords
-  const highImportanceKeywords = missingKeywords.filter(k => k.importance === 'high');
-  if (highImportanceKeywords.length > 0) {
-    suggestions.push({
-      title: 'Add Critical Keywords',
-      text: `Add these ${highImportanceKeywords.length} critical keywords to your resume: ${highImportanceKeywords.map(k => k.text).join(', ')}`,
-      priority: 'high'
-    });
-  }
-  
-  // Suggest quantifying achievements
-  suggestions.push({
-    title: 'Quantify Your Achievements',
-    text: 'Add metrics and numbers to your achievements to make them more impactful (e.g., "Increased sales by 23%" instead of "Increased sales").',
-    priority: 'medium'
   });
   
-  // Suggest tailoring for ATS
-  suggestions.push({
-    title: 'Format for ATS Compatibility',
-    text: 'Ensure your resume uses a clean, ATS-friendly format with standard section headings and avoid using tables, images, or unusual formatting.',
-    priority: 'medium'
-  });
+  // Bonus for matched keywords
+  if (matchedKeywordsCount > 20) bonusPoints += 15;
+  else if (matchedKeywordsCount > 10) bonusPoints += 10;
+  else if (matchedKeywordsCount > 5) bonusPoints += 5;
   
-  // Suggest adding industry-specific keywords
-  const industryKeywords = missingKeywords.filter(k => k.category === 'Industry Knowledge');
-  if (industryKeywords.length > 0) {
-    suggestions.push({
-      title: 'Add Industry-Specific Terms',
-      text: `Include industry terminology like: ${industryKeywords.slice(0, 3).map(k => k.text).join(', ')}`,
-      priority: 'low'
-    });
-  }
-  
-  return suggestions;
-};
-
-/**
- * Generate section-specific recommendations
- * @param {Object} resumeData - Resume data
- * @param {Object} jobData - Job description data
- * @param {Object} sectionScores - Scores for each section
- * @returns {Array} Section recommendations
- */
-const generateSectionRecommendations = (resumeData, jobData, sectionScores) => {
-  const recommendations = [];
-  
-  // Experience section
-  if (resumeData.sections?.experience) {
-    const score = sectionScores.experience || 0;
-    let status = 'improve';
-    if (score >= 80) status = 'excellent';
-    else if (score >= 60) status = 'good';
-    
-    recommendations.push({
-      id: 'experience',
-      title: 'Professional Experience',
-      status,
-      feedback: getExperienceFeedback(score),
-      suggestions: [
-        'Use action verbs at the beginning of each bullet point',
-        'Include quantifiable achievements with metrics',
-        'Align your experience descriptions with job requirements'
-      ],
-      beforeAfter: {
-        before: 'Managed a team and improved performance',
-        after: 'Led a cross-functional team of 8 engineers, improving sprint velocity by 35% through agile methodology implementation'
-      }
-    });
-  } else {
-    recommendations.push({
-      id: 'experience',
-      title: 'Professional Experience',
-      status: 'missing',
-      feedback: 'Your resume is missing a dedicated Professional Experience section, which is critical for most job applications.',
-      suggestions: [
-        'Add a Professional Experience section with your work history',
-        'List positions in reverse chronological order',
-        'Include company name, your title, and dates of employment',
-        'Add 3-5 bullet points describing your responsibilities and achievements'
-      ]
-    });
-  }
-  
-  // Skills section
-  if (resumeData.sections?.skills) {
-    const score = sectionScores.skills || 0;
-    let status = 'improve';
-    if (score >= 80) status = 'excellent';
-    else if (score >= 60) status = 'good';
-    
-    recommendations.push({
-      id: 'skills',
-      title: 'Skills',
-      status,
-      feedback: getSkillsFeedback(score, jobData),
-      suggestions: [
-        'Group skills by category (Technical, Soft Skills, Tools, etc.)',
-        'Prioritize skills mentioned in the job description',
-        'Remove outdated or irrelevant skills'
-      ],
-      examples: [
-        {
-          context: 'Technical Skills Organization',
-          content: 'Technical: React, Node.js, TypeScript, GraphQL\nTools: Git, Docker, AWS, Jira\nSoft Skills: Team Leadership, Agile Methodology, Communication'
-        }
-      ]
-    });
-  }
-  
-  // Education section
-  if (resumeData.sections?.education) {
-    recommendations.push({
-      id: 'education',
-      title: 'Education',
-      status: 'good',
-      feedback: 'Your education section is well-structured, but consider adding relevant coursework or achievements if they align with the job requirements.',
-      suggestions: [
-        'Include relevant coursework if you\'re a recent graduate',
-        'Add academic achievements if they relate to the job'
-      ]
-    });
-  }
-  
-  // Summary section
-  if (resumeData.sections?.summary) {
-    const score = sectionScores.summary || 0;
-    let status = 'improve';
-    if (score >= 70) status = 'excellent';
-    else if (score >= 50) status = 'good';
-    
-    recommendations.push({
-      id: 'summary',
-      title: 'Professional Summary',
-      status,
-      feedback: 'Your professional summary should be tailored to the specific job and highlight your most relevant qualifications.',
-      suggestions: [
-        'Keep it concise (3-4 sentences maximum)',
-        'Include your years of experience, key skills, and notable achievements',
-        'Tailor it to match the job description'
-      ],
-      beforeAfter: {
-        before: 'Experienced software developer with a passion for coding and problem-solving.',
-        after: 'Results-oriented Software Engineer with 5+ years of experience in full-stack development using React and Node.js. Proven track record of delivering scalable solutions that improved user engagement by 40% and reduced load times by 60%.'
-      }
-    });
-  }
-  
-  return recommendations;
-};
-
-/**
- * Get feedback for experience section based on score
- * @param {number} score - Section score
- * @returns {string} Feedback text
- */
-const getExperienceFeedback = (score) => {
-  if (score >= 80) {
-    return 'Your experience section is well-aligned with the job requirements. The use of strong action verbs and specific achievements is effective.';
-  } else if (score >= 60) {
-    return 'Your experience section is good but could be more tailored to this specific role. Try to incorporate more keywords from the job description.';
-  } else {
-    return 'Your experience section needs significant improvements to match this job description. Focus on highlighting relevant responsibilities and achievements that align with the role.';
-  }
-};
-
-/**
- * Get feedback for skills section based on score
- * @param {number} score - Section score
- * @param {Object} jobData - Job description data
- * @returns {string} Feedback text
- */
-const getSkillsFeedback = (score, jobData) => {
-  if (score >= 80) {
-    return 'Your skills section is well-aligned with the job requirements. The organization and relevance of skills is excellent.';
-  } else if (score >= 60) {
-    return 'Your skills section contains many relevant skills, but could be better organized and prioritized based on the job description.';
-  } else {
-    return 'Your skills section needs to be better aligned with the job requirements. Consider adding more of the technical and soft skills mentioned in the job description.';
-  }
+  // Calculate final score
+  const finalScore = Math.min(baseScore + bonusPoints, 100);
+  return finalScore;
 }; 

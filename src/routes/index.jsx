@@ -37,9 +37,9 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/templates" element={<Templates />} />
-        <Route path="/editor" element={<ResumeEditor />} />
+        <Route path="/resume-editor/:resumeId" element={<ResumeEditor />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/analyzer" element={<ResumeAnalyzerPage />} />
+        <Route path="/analyzer/:resumeId" element={<ResumeAnalyzerPage />} />
       </Route>
       
       {/* 404 Route */}

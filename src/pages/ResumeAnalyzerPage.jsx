@@ -1,48 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ResumeAnalyzer from '../components/ResumeAnalyzer/ResumeAnalyzer';
+import { getResumeById } from '../services/resumeService';
+import { getAnalysisHistory } from '../services/analyzerService';
+import { formatDate } from '../utils/dateUtils';
 import './ResumeAnalyzerPage.css';
 
 const ResumeAnalyzerPage = () => {
   const [resumeData, setResumeData] = useState(null);
+  const [analysisHistory, setAnalysisHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { resumeId } = useParams();
   
-  // Fetch the user's current resume data
+  // Fetch the user's current resume data and analysis history
   useEffect(() => {
-    const fetchResumeData = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
         
-        // In a real implementation, this would fetch from an API
-        // For demo purposes, we'll use mock data after a brief delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (!resumeId) {
+          setError('No resume selected. Please choose a resume to analyze.');
+          setIsLoading(false);
+          return;
+        }
         
-        // Mock resume data for demonstration
-        const mockResumeData = {
-          id: '12345',
-          title: 'Software Engineer Resume',
-          sections: {
-            summary: {
-              content: 'Experienced software engineer with 5+ years of experience in full-stack development. Proficient in React, Node.js, and cloud technologies.'
-            },
-            experience: {
-              content: 'Senior Software Engineer at TechCorp (2020-Present)\n- Developed and maintained multiple React applications\n- Implemented CI/CD pipelines using GitHub Actions\n- Improved application performance by 40%\n\nSoftware Developer at WebSolutions (2018-2020)\n- Built RESTful APIs using Node.js and Express\n- Collaborated with cross-functional teams on agile projects\n- Implemented automated testing strategies'
-            },
-            education: {
-              content: 'Bachelor of Science in Computer Science\nUniversity of Technology (2014-2018)'
-            },
-            skills: {
-              content: 'Programming: JavaScript, TypeScript, HTML, CSS, Python\nFrameworks: React, Node.js, Express\nTools: Git, Docker, AWS, Jest, Webpack\nSoft Skills: Team collaboration, problem-solving, communication'
-            },
-            projects: {
-              content: 'E-commerce Platform\n- Built using MERN stack\n- Implemented user authentication and payment processing\n\nData Visualization Dashboard\n- Created interactive charts using D3.js\n- Implemented real-time data updates using WebSockets'
-            }
-          }
-        };
+        // Fetch resume data
+        const resume = await getResumeById(resumeId);
+        setResumeData(resume);
         
-        setResumeData(mockResumeData);
+        // Fetch analysis history for this resume
+        try {
+          const history = await getAnalysisHistory();
+          const resumeHistory = history.filter(item => item.resumeId === resumeId);
+          setAnalysisHistory(resumeHistory);
+        } catch (historyError) {
+          console.error('Error fetching analysis history:', historyError);
+          // Don't set an error - analysis history is not critical
+        }
       } catch (err) {
         console.error('Error fetching resume data:', err);
         setError('Failed to load your resume. Please try again later.');
@@ -51,11 +47,14 @@ const ResumeAnalyzerPage = () => {
       }
     };
     
-    fetchResumeData();
-  }, []);
+    fetchData();
+  }, [resumeId]);
   
   const handleBackToResume = () => {
-    // In a real application, this would navigate to the resume editor
+    navigate(`/resume-editor/${resumeId}`);
+  };
+  
+  const handleBackToDashboard = () => {
     navigate('/dashboard');
   };
   
@@ -74,7 +73,10 @@ const ResumeAnalyzerPage = () => {
         <div className="error-message">
           <h2>Something went wrong</h2>
           <p>{error}</p>
-          <button onClick={() => window.location.reload()}>Try Again</button>
+          <div className="error-actions">
+            <button onClick={handleBackToDashboard}>Back to Dashboard</button>
+            <button onClick={() => window.location.reload()}>Try Again</button>
+          </div>
         </div>
       </div>
     );
@@ -119,6 +121,25 @@ const ResumeAnalyzerPage = () => {
             <p>Get actionable suggestions to improve your resume</p>
           </div>
         </div>
+        
+        {analysisHistory.length > 0 && (
+          <div className="analysis-history">
+            <h3>Previous Analyses</h3>
+            <div className="history-list">
+              {analysisHistory.map(item => (
+                <div key={item._id} className="history-item">
+                  <div className="history-date">
+                    {formatDate(item.timestamp, { format: 'short' })}
+                  </div>
+                  <div className="history-scores">
+                    <span className="match-score">Match: {item.matchScore}%</span>
+                    <span className="ats-score">ATS: {item.atsScore}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
         <ResumeAnalyzer resumeData={resumeData} />
       </div>

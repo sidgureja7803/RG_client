@@ -40,6 +40,7 @@ import {
 import { useSocket } from '../hooks/useSocket';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
+import { formatDate } from '../utils/dateUtils';
 
 const AIResumeEditor = ({ section, content, onChange, resumeId }) => {
   const [suggestions, setSuggestions] = useState([]);
@@ -398,7 +399,7 @@ const AIResumeEditor = ({ section, content, onChange, resumeId }) => {
                   </ListItemIcon>
                   <ListItemText
                     primary={comment.text}
-                    secondary={`${comment.username} • ${new Date(comment.timestamp).toLocaleString()}`}
+                    secondary={`${comment.username} • ${formatDate(comment.timestamp, { includeTime: true })}`}
                   />
                 </ListItem>
               ))}

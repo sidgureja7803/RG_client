@@ -1,13 +1,15 @@
 import axios from 'axios';
 
+// Create an axios instance with default config
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
+  timeout: 15000, // 15 seconds
 });
 
-// Add a request interceptor
+// Request interceptor for adding auth token to requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -16,19 +18,30 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Add a response interceptor
+// Response interceptor for handling common errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Handle auth errors
+    if (error.response && error.response.status === 401) {
+      // Clear local storage
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem('user');
+      
+      // Redirect to login page if not already there
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login?session=expired';
+      }
     }
+    
+    // Handle server errors
+    if (error.response && error.response.status >= 500) {
+      console.error('Server error:', error.response);
+    }
+    
     return Promise.reject(error);
   }
 );
