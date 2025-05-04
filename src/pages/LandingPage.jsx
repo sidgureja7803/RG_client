@@ -3,20 +3,72 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { TextPlugin } from 'gsap/TextPlugin';
+import Lenis from '@studio-freight/lenis';
 import * as THREE from 'three';
 import './LandingPage.css';
 
-// Register ScrollTrigger plugin
-gsap.registerPlugin(ScrollTrigger);
+// Register GSAP plugins
+gsap.registerPlugin(ScrollTrigger, TextPlugin);
 
 const LandingPage = () => {
   const heroRef = useRef(null);
   const featuresRef = useRef(null);
   const canvasRef = useRef(null);
+  const mainRef = useRef(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
-  // Three.js setup
+  // Initialize smooth scrolling with Lenis
   useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      direction: 'vertical',
+      gestureDirection: 'vertical',
+      smooth: true,
+      mouseMultiplier: 1,
+      smoothTouch: false,
+      touchMultiplier: 2,
+      infinite: false,
+    });
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    
+    requestAnimationFrame(raf);
+    
+    // Handle link clicks for smooth scrolling
+    const handleAnchorClick = (e) => {
+      const target = e.target.closest('a[href^="#"]');
+      if (!target) return;
+      
+      e.preventDefault();
+      const targetId = target.getAttribute('href');
+      const targetElement = document.querySelector(targetId);
+      
+      if (targetElement) {
+        lenis.scrollTo(targetElement, {
+          offset: -100,
+          duration: 1.5
+        });
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleAnchorClick);
+    
+    return () => {
+      document.removeEventListener('click', handleAnchorClick);
+      lenis.destroy();
+    };
+  }, []);
+
+  // Three.js setup - Resume visualization
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    
     // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 400, 0.1, 1000);
@@ -29,7 +81,7 @@ const LandingPage = () => {
     });
     renderer.setSize(window.innerWidth > 768 ? 500 : window.innerWidth - 40, 400);
     
-    // Create a more complex document object
+    // Create a realistic resume document
     const pageGeometry = new THREE.BoxGeometry(5, 7, 0.2);
     const pageMaterial = new THREE.MeshStandardMaterial({ 
       color: '#ffffff',
@@ -51,19 +103,11 @@ const LandingPage = () => {
     const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
     scene.add(wireframe);
     
-    // Add decorative elements
+    // Add resume content elements
     const lineGeometry = new THREE.BoxGeometry(4, 0.1, 0.1);
     const lineMaterial = new THREE.MeshBasicMaterial({ color: '#f72585' });
     
-    // Create multiple lines for resume elements
-    for (let i = 0; i < 5; i++) {
-      const line = new THREE.Mesh(lineGeometry, lineMaterial);
-      line.position.y = 2.5 - (i * 1.2);
-      line.position.z = 0.15;
-      page.add(line);
-    }
-    
-    // Add a header-like element
+    // Create header element
     const headerGeometry = new THREE.BoxGeometry(4, 0.8, 0.1);
     const headerMaterial = new THREE.MeshBasicMaterial({ color: '#7209b7' });
     const header = new THREE.Mesh(headerGeometry, headerMaterial);
@@ -71,11 +115,32 @@ const LandingPage = () => {
     header.position.z = 0.15;
     page.add(header);
     
-    // Add ambient light
+    // Create content lines for resume elements
+    const contentPositions = [
+      { y: 2.0, width: 4 },   // Name
+      { y: 1.5, width: 3.8 },  // Contact info
+      { y: 0.8, width: 3.9 },  // Experience header
+      { y: 0.3, width: 3.5 },  // Job title
+      { y: -0.2, width: 3.8 }, // Bullet point
+      { y: -0.7, width: 3.2 }, // Bullet point
+      { y: -1.2, width: 3.6 }, // Bullet point
+      { y: -1.9, width: 3.9 }, // Education header
+      { y: -2.4, width: 3.7 }  // Degree
+    ];
+    
+    contentPositions.forEach((pos) => {
+      const lineWidth = pos.width || 4;
+      const lineGeom = new THREE.BoxGeometry(lineWidth, 0.12, 0.1);
+      const line = new THREE.Mesh(lineGeom, lineMaterial);
+      line.position.y = pos.y;
+      line.position.z = 0.15;
+      page.add(line);
+    });
+    
+    // Add lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
     
-    // Add directional light for shadows
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(5, 5, 5);
     scene.add(directionalLight);
@@ -87,9 +152,10 @@ const LandingPage = () => {
     const animate = () => {
       requestAnimationFrame(animate);
       
-      // More subtle rotation
-      page.rotation.x = Math.sin(Date.now() * 0.001) * 0.1;
-      page.rotation.y = Math.sin(Date.now() * 0.0015) * 0.15 + 0.2;
+      // More natural resume animation
+      const time = Date.now() * 0.001;
+      page.rotation.x = Math.sin(time * 0.5) * 0.1;
+      page.rotation.y = Math.sin(time * 0.3) * 0.15 + 0.2;
       
       wireframe.rotation.x = page.rotation.x;
       wireframe.rotation.y = page.rotation.y;
@@ -125,19 +191,41 @@ const LandingPage = () => {
   
   // GSAP animations
   useEffect(() => {
-    // Hero section animations
-    gsap.from(".hero-text h1", {
-      y: 50,
+    // Split text animation helper function
+    const splitTextIntoSpans = (selector) => {
+      const elements = document.querySelectorAll(selector);
+      
+      elements.forEach(element => {
+        const text = element.innerText;
+        const words = text.split(' ');
+        
+        let html = '';
+        words.forEach(word => {
+          html += `<span class="word"><span class="word-inner">${word}</span></span> `;
+        });
+        
+        element.innerHTML = html;
+      });
+    };
+    
+    // Apply to headings
+    splitTextIntoSpans('.hero-text h1, .section-header h2');
+    
+    // Create stagger effect for hero heading
+    gsap.from(".hero-text .word-inner", {
+      y: "100%",
       opacity: 0,
-      duration: 1.2,
-      ease: "power3.out"
+      duration: 1,
+      ease: "power3.out",
+      stagger: 0.04
     });
     
+    // Hero section animations
     gsap.from(".hero-text p", {
       y: 30,
       opacity: 0,
       duration: 1.2,
-      delay: 0.3,
+      delay: 0.6,
       ease: "power3.out"
     });
     
@@ -145,7 +233,7 @@ const LandingPage = () => {
       y: 30,
       opacity: 0,
       duration: 1,
-      delay: 0.6,
+      delay: 0.9,
       ease: "power3.out"
     });
     
@@ -154,7 +242,7 @@ const LandingPage = () => {
       x: 100,
       opacity: 0,
       duration: 1.5,
-      delay: 0.2,
+      delay: 0.4,
       ease: "power3.out"
     });
     
@@ -189,17 +277,32 @@ const LandingPage = () => {
       ease: "sine.inOut"
     });
     
-    // Features animations
+    // Features section animations
     gsap.from(".feature-card", {
       scrollTrigger: {
         trigger: ".features-section",
-        start: "top 80%"
+        start: "top 80%",
+        toggleActions: "play none none none"
       },
       y: 50,
       opacity: 0,
       duration: 0.8,
       stagger: 0.2,
       ease: "power2.out"
+    });
+    
+    // AI title typewriter effect
+    gsap.to(".typewriter-text", {
+      scrollTrigger: {
+        trigger: ".features-section",
+        start: "top 60%"
+      },
+      duration: 3,
+      text: {
+        value: "AI Powered",
+        delimiter: ""
+      },
+      ease: "none"
     });
     
     // Benefits animation
@@ -229,7 +332,7 @@ const LandingPage = () => {
     });
     
     // CTA section animation
-    gsap.from(".cta-section", {
+    gsap.from(".cta-content", {
       scrollTrigger: {
         trigger: ".cta-section",
         start: "top 80%"
@@ -239,6 +342,22 @@ const LandingPage = () => {
       duration: 1,
       ease: "power3.out"
     });
+    
+    // Animated resume sections
+    const resumeItems = document.querySelectorAll('.resume-sample-item');
+    resumeItems.forEach((item, index) => {
+      gsap.from(item, {
+        scrollTrigger: {
+          trigger: item,
+          start: "top 85%"
+        },
+        y: 50,
+        opacity: 0,
+        duration: 0.6,
+        delay: index * 0.1,
+        ease: "power2.out"
+      });
+    });
   }, []);
   
   const toggleMenu = () => {
@@ -246,7 +365,7 @@ const LandingPage = () => {
   };
   
   return (
-    <div className="landing-page">
+    <main ref={mainRef} className="landing-page">
       {/* Navigation */}
       <nav className="navbar">
         <div className="container">
@@ -269,7 +388,7 @@ const LandingPage = () => {
             
             <div className={`auth-buttons ${isMenuOpen ? 'active' : ''}`}>
               <Link to="/login" className="btn btn-outline">Log In</Link>
-              <Link to="/signup" className="btn btn-primary">Sign Up</Link>
+              <Link to="/register" className="btn btn-primary">Sign Up</Link>
             </div>
           </div>
         </div>
@@ -285,15 +404,18 @@ const LandingPage = () => {
         <div className="container">
           <div className="hero-content">
             <div className="hero-text">
-              <h1>Create Professional Resumes in Minutes</h1>
+              <h1>Get dream jobs with our</h1>
+              <div className="ai-title">
+                <span className="typewriter-text">AI Powered</span> 
+                <span className="title-suffix">resume builder</span>
+              </div>
               <p>
-                Stand out from the crowd with our AI-powered resume builder. 
-                Customize templates, receive real-time feedback, and optimize 
-                your resume for ATS systems.
+                Build a professional and outstanding resume with our free builder and templates.
+                Create, customize, and optimize your resume for ATS systems in minutes.
               </p>
               <div className="cta-buttons">
-                <Link to="/signup" className="btn btn-primary btn-lg">Get Started Free</Link>
-                <a href="#features" className="btn btn-outline btn-lg">Learn More</a>
+                <Link to="/register" className="btn btn-primary btn-lg">Create my resume</Link>
+                <Link to="/templates" className="btn btn-outline btn-lg">View templates</Link>
               </div>
             </div>
             
@@ -304,13 +426,87 @@ const LandingPage = () => {
         </div>
       </section>
       
+      {/* Resume Sample Section */}
+      <section className="resume-sample-section">
+        <div className="container">
+          <div className="resume-sample-wrapper">
+            <div className="resume-sample">
+              <div className="resume-sample-inner">
+                <div className="resume-sample-item resume-header">
+                  <div className="resume-name">Your Resume</div>
+                  <div className="resume-contact">email@example.com | +1 123-456-7890</div>
+                </div>
+                
+                <div className="resume-sample-item">
+                  <div className="resume-section-title">Work Experience</div>
+                </div>
+                
+                <div className="resume-sample-item">
+                  <div className="resume-job">
+                    <span className="company-name">Company A</span> | New York, NY
+                  </div>
+                  <div className="resume-position">Business Development Manager | Jan 2022 - Present</div>
+                  <ul className="resume-bullets">
+                    <li>Managed sales cycle from prospect to closing independently</li>
+                    <li>Discussed progress with management and developed solutions to improve closing rate by 30%</li>
+                    <li>Created sales reports for team leadership with Python and internal data visualization tools</li>
+                  </ul>
+                </div>
+                
+                <div className="resume-sample-item">
+                  <div className="resume-job">
+                    <span className="company-name">Company B</span> | Brooklyn, NY
+                  </div>
+                  <div className="resume-position">Administrative Assistant | Aug 2018 - Jul 2020</div>
+                </div>
+                
+                <div className="resume-sample-item">
+                  <div className="resume-section-title">Certifications and Licenses</div>
+                  <div className="certifications">First Aid Certification, CPR Certification</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="resume-tools">
+              <div className="resume-tool">
+                <div className="tool-icon">
+                  <i className="fas fa-robot"></i>
+                </div>
+                <div className="tool-label">AI writer</div>
+              </div>
+              
+              <div className="resume-tool">
+                <div className="tool-icon">
+                  <i className="fas fa-tasks"></i>
+                </div>
+                <div className="tool-label">Easy to match</div>
+              </div>
+              
+              <div className="resume-tool">
+                <div className="tool-icon">
+                  <i className="fas fa-book"></i>
+                </div>
+                <div className="tool-label">Helpful resources</div>
+              </div>
+              
+              <div className="resume-tool">
+                <div className="tool-icon">
+                  <i className="fas fa-briefcase"></i>
+                </div>
+                <div className="tool-label">Build-in jobs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       {/* Features Section */}
       <section className="features-section" id="features" ref={featuresRef}>
         <div className="animated-shape animated-shape-3"></div>
         <div className="container">
           <div className="section-header">
-            <h2>Powerful Features</h2>
-            <p>Everything you need to create the perfect resume</p>
+            <h2>Create resumes that get noticed</h2>
+            <p>Simple, easy, fast, free</p>
           </div>
           
           <div className="features-grid">
@@ -379,6 +575,47 @@ const LandingPage = () => {
                 to LinkedIn or via email with potential employers.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Every Detail Section */}
+      <section className="detail-section">
+        <div className="container">
+          <div className="detail-content">
+            <div className="detail-text">
+              <h2>Every detail on your resume, built to perfection</h2>
+              <p>
+                Our resume templates are based on what employers actually look for in a candidate. 
+                How do we know? We've talked with thousands of employers to get the answers.
+              </p>
+              <Link to="/register" className="btn btn-primary btn-lg">Create my resume</Link>
+            </div>
+            <div className="detail-resume">
+              <img 
+                src="https://i.imgur.com/jCtKpLM.png" 
+                alt="Detailed Resume Example" 
+                className="resume-image"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Cover Letter Section */}
+      <section className="coverletter-section">
+        <div className="container">
+          <div className="section-header">
+            <h2>Instantly generate cover letters with AI</h2>
+            <Link to="/register" className="create-link">Create cover letter →</Link>
+          </div>
+          
+          <div className="coverletter-example">
+            <img 
+              src="https://i.imgur.com/KYVnGbU.png" 
+              alt="Cover Letter Example" 
+              className="coverletter-image"
+            />
           </div>
         </div>
       </section>
@@ -527,7 +764,7 @@ const LandingPage = () => {
           <div className="cta-content">
             <h2>Ready to Land Your Dream Job?</h2>
             <p>Create your professional resume in minutes - completely free.</p>
-            <Link to="/signup" className="btn btn-primary btn-lg">Get Started Now</Link>
+            <Link to="/register" className="btn btn-primary btn-lg">Get Started Now</Link>
           </div>
         </div>
       </section>
@@ -573,10 +810,10 @@ const LandingPage = () => {
             <div className="footer-social">
               <h3>Follow Us</h3>
               <div className="social-icons">
-                <a href="#"><i className="fab fa-twitter"></i></a>
-                <a href="#"><i className="fab fa-linkedin"></i></a>
-                <a href="#"><i className="fab fa-instagram"></i></a>
-                <a href="#"><i className="fab fa-facebook"></i></a>
+                <a href="#" aria-label="Twitter"><i className="fab fa-twitter"></i></a>
+                <a href="#" aria-label="LinkedIn"><i className="fab fa-linkedin"></i></a>
+                <a href="#" aria-label="Instagram"><i className="fab fa-instagram"></i></a>
+                <a href="#" aria-label="Facebook"><i className="fab fa-facebook"></i></a>
               </div>
             </div>
           </div>
@@ -586,7 +823,7 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
-    </div>
+    </main>
   );
 };
 
