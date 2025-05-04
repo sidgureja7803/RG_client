@@ -81,6 +81,7 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/oauth/callback" element={<OAuthCallback />} />
+            <Route path="/templates/public" element={<Templates />} />
 
             {/* Protected Routes */}
             <Route

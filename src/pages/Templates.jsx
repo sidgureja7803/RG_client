@@ -1,5 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import {
   Box,
   Container,
@@ -13,6 +14,9 @@ import {
 
 const Templates = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useSelector((state) => state.auth);
+  const isPublicView = location.pathname === '/templates/public';
 
   const templates = [
     {
@@ -42,7 +46,11 @@ const Templates = () => {
   ];
 
   const handleSelectTemplate = (templateId) => {
-    navigate(`/editor?template=${templateId}`);
+    if (isAuthenticated) {
+      navigate(`/editor?template=${templateId}`);
+    } else {
+      navigate('/register', { state: { redirectTo: `/editor?template=${templateId}` } });
+    }
   };
 
   return (
@@ -53,6 +61,22 @@ const Templates = () => {
       <Typography variant="body1" color="text.secondary" paragraph>
         Select from our professionally designed templates to create your perfect resume.
       </Typography>
+
+      {isPublicView && !isAuthenticated && (
+        <Box sx={{ mb: 4, p: 2, bgcolor: 'primary.light', borderRadius: 1 }}>
+          <Typography variant="body1" color="white">
+            Create an account to use these templates and save your resume!
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="secondary" 
+            sx={{ mt: 1 }}
+            onClick={() => navigate('/register')}
+          >
+            Sign Up for Free
+          </Button>
+        </Box>
+      )}
 
       <Grid container spacing={4}>
         {templates.map((template) => (

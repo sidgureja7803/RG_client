@@ -1,42 +1,5 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import authService from '../../services/auth.service';
-
-// Async thunks
-export const login = createAsyncThunk(
-  'auth/login',
-  async ({ email, password }, { rejectWithValue }) => {
-    try {
-      const data = await authService.login(email, password);
-      return data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
-    }
-  }
-);
-
-export const loginWithGoogle = createAsyncThunk(
-  'auth/loginWithGoogle',
-  async (token, { rejectWithValue }) => {
-    try {
-      const data = await authService.loginWithGoogle(token);
-      return data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Google login failed');
-    }
-  }
-);
-
-export const loginWithGithub = createAsyncThunk(
-  'auth/loginWithGithub',
-  async (code, { rejectWithValue }) => {
-    try {
-      const data = await authService.loginWithGithub(code);
-      return data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'GitHub login failed');
-    }
-  }
-);
+import { createSlice } from '@reduxjs/toolkit';
+import { login, register, loginWithGoogle, loginWithGithub, getCurrentUser, logout } from '../../redux/actions/authActions';
 
 const initialState = {
   user: null,
@@ -69,7 +32,7 @@ const authSlice = createSlice({
       state.token = null;
       localStorage.removeItem('token');
     },
-    logout: (state) => {
+    logoutAction: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
@@ -83,6 +46,22 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Register
+      .addCase(register.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(register.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        localStorage.setItem('token', action.payload.token);
+      })
+      .addCase(register.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
       // Login
       .addCase(login.pending, (state) => {
         state.loading = true;
@@ -130,6 +109,13 @@ const authSlice = createSlice({
       .addCase(loginWithGithub.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      // Logout
+      .addCase(logout.fulfilled, (state) => {
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
+        localStorage.removeItem('token');
       });
   }
 });
@@ -138,8 +124,11 @@ export const {
   loginStart, 
   loginSuccess, 
   loginFailure, 
-  logout,
+  logoutAction,
   updateUser 
 } = authSlice.actions;
 
-export default authSlice.reducer; 
+// Re-export the imported functions
+export { login, register, loginWithGoogle, loginWithGithub, getCurrentUser, logout };
+
+export default authSlice.reducer;

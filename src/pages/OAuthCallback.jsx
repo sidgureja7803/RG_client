@@ -15,6 +15,12 @@ const OAuthCallback = () => {
       const code = searchParams.get('code');
       const token = searchParams.get('token');
       const error = searchParams.get('error');
+      
+      // Get redirect path from local storage or default to dashboard
+      const redirectPath = localStorage.getItem('redirectAfterAuth') || '/dashboard';
+      
+      // Clear the stored redirect path
+      localStorage.removeItem('redirectAfterAuth');
 
       if (error) {
         console.error('OAuth Error:', error);
@@ -28,7 +34,7 @@ const OAuthCallback = () => {
         } else if (provider === 'github' && code) {
           await dispatch(loginWithGithub(code));
         }
-        navigate('/dashboard');
+        navigate(redirectPath);
       } catch (err) {
         console.error('Authentication Error:', err);
         navigate('/login');

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -26,7 +26,11 @@ const Login = () => {
   const theme = useTheme();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { loading, error } = useSelector((state) => state.auth);
+
+  // Get redirect path from location state or default to dashboard
+  const redirectPath = location.state?.from?.pathname || location.state?.redirectTo || '/dashboard';
 
   const [formData, setFormData] = useState({
     email: '',
@@ -45,15 +49,19 @@ const Login = () => {
     e.preventDefault();
     const result = await dispatch(login(formData));
     if (!result.error) {
-      navigate('/dashboard');
+      navigate(redirectPath);
     }
   };
 
   const handleGoogleLogin = () => {
+    // Store the redirect path before redirecting to OAuth
+    localStorage.setItem('redirectAfterAuth', redirectPath);
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
   };
 
   const handleGithubLogin = () => {
+    // Store the redirect path before redirecting to OAuth
+    localStorage.setItem('redirectAfterAuth', redirectPath);
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
   };
 

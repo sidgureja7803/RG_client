@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -13,10 +13,11 @@ import {
   Alert,
   CircularProgress,
   Divider,
-  IconButton
+  IconButton,
+  useTheme
 } from '@mui/material';
-import { useDispatch } from 'react-redux';
-import authService from '../services/auth.service';
+import { useDispatch, useSelector } from 'react-redux';
+import { register } from '../redux/actions/authActions';
 
 // Steps for manual registration
 const steps = ['Account Details', 'Personal Information', 'Verification'];
@@ -24,10 +25,14 @@ const steps = ['Account Details', 'Personal Information', 'Verification'];
 const Register = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [activeStep, setActiveStep] = useState(0);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const location = useLocation();
+  const { error, loading } = useSelector((state) => state.auth);
+  const theme = useTheme();
+  
+  // Get redirect path from location state or default to dashboard
+  const redirectPath = location.state?.redirectTo || '/dashboard';
 
+  const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -37,6 +42,7 @@ const Register = () => {
     phone: '',
     verificationCode: ''
   });
+  const [formErrors, setFormErrors] = useState({});
 
   const handleChange = (e) => {
     setFormData({
@@ -48,18 +54,18 @@ const Register = () => {
   const handleNext = async () => {
     if (activeStep === 0) {
       if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
+        setFormErrors({ ...formErrors, confirmPassword: 'Passwords do not match' });
         return;
       }
       // Validate first step
       if (!formData.email || !formData.password || !formData.confirmPassword) {
-        setError('Please fill in all fields');
+        setFormErrors({ ...formErrors, email: 'Please fill in all fields' });
         return;
       }
     } else if (activeStep === 1) {
       // Validate second step
       if (!formData.firstName || !formData.lastName) {
-        setError('Please fill in all required fields');
+        setFormErrors({ ...formErrors, firstName: 'Please fill in all required fields', lastName: 'Please fill in all required fields' });
         return;
       }
     } else if (activeStep === 2) {
@@ -67,15 +73,10 @@ const Register = () => {
       try {
         setLoading(true);
         setError('');
-        await authService.register({
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          verificationCode: formData.verificationCode
-        });
-        navigate('/login');
+        const result = await dispatch(register(formData));
+        if (!result.error) {
+          navigate(redirectPath);
+        }
       } catch (err) {
         setError(err.response?.data?.message || 'Registration failed');
       } finally {
@@ -92,18 +93,16 @@ const Register = () => {
     setError('');
   };
 
-  const handleSocialLogin = async (provider) => {
-    try {
-      setLoading(true);
-      setError('');
-      // This would typically redirect to the OAuth provider's auth page
-      await authService.socialLogin(provider);
-      // The actual redirect would happen in the service, this is just for demo
-      navigate('/dashboard');
-    } catch (err) {
-      setError(`${provider} login failed. Please try again.`);
-      setLoading(false);
-    }
+  const handleGoogleSignup = () => {
+    // Store the redirect path before redirecting to OAuth
+    localStorage.setItem('redirectAfterAuth', redirectPath);
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+  };
+
+  const handleGithubSignup = () => {
+    // Store the redirect path before redirecting to OAuth
+    localStorage.setItem('redirectAfterAuth', redirectPath);
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
   };
 
   const getStepContent = (step) => {
@@ -223,7 +222,7 @@ const Register = () => {
             <Button
               fullWidth
               variant="outlined"
-              onClick={() => handleSocialLogin('google')}
+              onClick={handleGoogleSignup}
               startIcon={<i className="fab fa-google" />}
               sx={{ 
                 borderColor: '#DB4437', 
@@ -240,7 +239,7 @@ const Register = () => {
             <Button
               fullWidth
               variant="outlined"
-              onClick={() => handleSocialLogin('github')}
+              onClick={handleGithubSignup}
               startIcon={<i className="fab fa-github" />}
               sx={{ 
                 borderColor: '#333',
