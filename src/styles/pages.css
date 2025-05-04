@@ -1,0 +1,357 @@
+/* Common page styles */
+.about-page,
+.contact-page,
+.blog-page,
+.guides-page,
+.terms-page,
+.privacy-page {
+  padding-top: 80px;
+  min-height: 100vh;
+  background-color: var(--light);
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.section-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 1rem;
+}
+
+.section-header p {
+  font-size: 1.2rem;
+  color: var(--gray-700);
+}
+
+/* About page styles */
+.about-content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.mission-statement {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.mission-statement h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.value-card {
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.value-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+.value-card i {
+  font-size: 2.5rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.value-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Contact page styles */
+.contact-content {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.info-card {
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.info-card i {
+  font-size: 2rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.info-card h3 {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.contact-form {
+  background: white;
+  padding: 3rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.contact-form h2 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+/* Blog page styles */
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.blog-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s ease;
+}
+
+.blog-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+.blog-image {
+  position: relative;
+}
+
+.blog-image img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.category-tag {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+.blog-content {
+  padding: 2rem;
+}
+
+.blog-date {
+  color: var(--gray-700);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.blog-content h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.read-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: 1rem;
+}
+
+/* Resume Guides styles */
+.guides-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.guide-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s ease;
+}
+
+.guide-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+.guide-icon {
+  font-size: 2.5rem;
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+}
+
+.guide-content h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.topics-list {
+  margin: 1.5rem 0;
+}
+
+.topics-list h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.8rem;
+}
+
+.topics-list ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.topics-list li {
+  padding: 0.5rem 0;
+  color: var(--gray-700);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+/* Terms and Privacy pages styles */
+.terms-content,
+.privacy-content {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  padding: 3rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.terms-section,
+.privacy-section {
+  margin-bottom: 2.5rem;
+}
+
+.terms-section h2,
+.privacy-section h2 {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  color: var(--dark);
+}
+
+.terms-section h3,
+.privacy-section h3 {
+  font-size: 1.3rem;
+  margin: 1.5rem 0 1rem;
+  color: var(--dark);
+}
+
+.terms-section p,
+.privacy-section p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+  color: var(--gray-700);
+}
+
+.terms-section ul,
+.privacy-section ul {
+  list-style: disc;
+  padding-left: 2rem;
+  margin: 1rem 0;
+}
+
+.terms-section li,
+.privacy-section li {
+  margin-bottom: 0.5rem;
+  color: var(--gray-700);
+}
+
+/* Responsive styles */
+@media (max-width: 992px) {
+  .contact-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .contact-info {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .info-card {
+    flex: 1;
+    min-width: 250px;
+  }
+}
+
+@media (max-width: 768px) {
+  .section-header h1 {
+    font-size: 2rem;
+  }
+  
+  .value-card,
+  .blog-card,
+  .guide-card {
+    padding: 1.5rem;
+  }
+  
+  .terms-content,
+  .privacy-content {
+    padding: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .contact-form {
+    padding: 1.5rem;
+  }
+  
+  .blog-image img {
+    height: 150px;
+  }
+} 
