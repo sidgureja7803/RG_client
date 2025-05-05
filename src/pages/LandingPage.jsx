@@ -543,7 +543,7 @@ const LandingPage = () => {
         </div>
         
         <div className="footer-bottom">
-          <p>&copy; {new Date().getFullYear()} ResumeAI. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} ResumeForge. All rights reserved.</p>
         </div>
       </footer>
     </div>
