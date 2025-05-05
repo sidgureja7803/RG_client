@@ -3,6 +3,10 @@ import api from './api';
 class AuthService {
   async login(email, password) {
     const response = await api.post('/auth/login', { email, password });
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data));
+    }
     return response.data;
   }
 
@@ -11,18 +15,35 @@ class AuthService {
     return response.data;
   }
 
+  async verifyEmail(userId, otp) {
+    const response = await api.post('/auth/verify-email', { userId, otp });
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data));
+    }
+    return response.data;
+  }
+
+  async resendOTP(userId) {
+    const response = await api.post('/auth/resend-otp', { userId });
+    return response.data;
+  }
+
   async loginWithGoogle(token) {
     const response = await api.post('/auth/google', { token });
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data));
+    }
     return response.data;
   }
 
   async loginWithGithub(code) {
     const response = await api.post('/auth/github', { code });
-    return response.data;
-  }
-
-  async verifyEmail(userId, otp) {
-    const response = await api.post('/auth/verify-email', { userId, otp });
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data));
+    }
     return response.data;
   }
 
@@ -38,6 +59,11 @@ class AuthService {
 
   async updateProfile(userData) {
     const response = await api.put('/auth/profile', userData);
+    if (response.data) {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = { ...user, ...response.data };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
     return response.data;
   }
 
@@ -51,6 +77,19 @@ class AuthService {
 
   logout() {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  }
+
+  getCurrentUser() {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      return JSON.parse(userStr);
+    }
+    return null;
+  }
+
+  isLoggedIn() {
+    return !!localStorage.getItem('token');
   }
 }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link as RouterLink, useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -15,10 +15,11 @@ import {
   Divider,
   IconButton,
   useTheme,
-  InputAdornment
+  InputAdornment,
+  Link
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { register, verifyEmail } from '../redux/actions/authActions';
+import { register, verifyEmail, resendOTP } from '../redux/actions/authActions';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
@@ -65,7 +66,6 @@ const Register = () => {
       const lastName = e.target.name === 'lastName' ? e.target.value : formData.lastName;
       
       if (firstName && lastName) {
-        // Create username from first name and last name, lowercase and remove spaces
         const generatedUsername = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/\s+/g, '');
         setFormData(prevData => ({
           ...prevData,
@@ -88,7 +88,9 @@ const Register = () => {
     switch (step) {
       case 0:
         if (!formData.email) errors.email = 'Email is required';
+        else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Invalid email format';
         if (!formData.password) errors.password = 'Password is required';
+        else if (formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
         if (formData.password !== formData.confirmPassword) {
           errors.confirmPassword = 'Passwords do not match';
         }
@@ -114,10 +116,10 @@ const Register = () => {
       return;
     }
 
-    if (activeStep === 0) {
-      setActiveStep(1);
-    } else if (activeStep === 1) {
-      try {
+    try {
+      if (activeStep === 0) {
+        setActiveStep(1);
+      } else if (activeStep === 1) {
         const result = await dispatch(register({
           email: formData.email,
           password: formData.password,
@@ -143,11 +145,7 @@ const Register = () => {
             }
           }, 1000);
         }
-      } catch (err) {
-        setFormErrors({ submit: err.message || 'Registration failed' });
-      }
-    } else if (activeStep === 2) {
-      try {
+      } else if (activeStep === 2) {
         const result = await dispatch(verifyEmail({
           userId,
           otp: formData.verificationCode
@@ -156,25 +154,42 @@ const Register = () => {
         if (result.token) {
           navigate(redirectPath);
         }
-      } catch (err) {
-        setFormErrors({ verificationCode: err.message || 'Verification failed' });
       }
+    } catch (err) {
+      setFormErrors({ submit: err.message || 'An error occurred' });
     }
   };
 
   const handleBack = () => {
     setActiveStep((prev) => prev - 1);
-    setError('');
+    setFormErrors({});
+  };
+
+  const handleResendCode = async () => {
+    try {
+      await dispatch(resendOTP({ userId })).unwrap();
+      setResendDisabled(true);
+      let timeLeft = 60;
+      setResendTimer(timeLeft);
+      const timer = setInterval(() => {
+        timeLeft -= 1;
+        setResendTimer(timeLeft);
+        if (timeLeft === 0) {
+          setResendDisabled(false);
+          clearInterval(timer);
+        }
+      }, 1000);
+    } catch (err) {
+      setFormErrors({ submit: err.message || 'Failed to resend code' });
+    }
   };
 
   const handleGoogleSignup = () => {
-    // Store the redirect path before redirecting to OAuth
     localStorage.setItem('redirectAfterAuth', redirectPath);
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
   };
 
   const handleGithubSignup = () => {
-    // Store the redirect path before redirecting to OAuth
     localStorage.setItem('redirectAfterAuth', redirectPath);
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
   };
@@ -196,7 +211,7 @@ const Register = () => {
               onChange={handleChange}
               error={!!formErrors.email}
               helperText={formErrors.email}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              autoFocus
             />
             <TextField
               margin="normal"
@@ -222,7 +237,6 @@ const Register = () => {
                   </InputAdornment>
                 ),
               }}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <TextField
               margin="normal"
@@ -236,7 +250,6 @@ const Register = () => {
               onChange={handleChange}
               error={!!formErrors.confirmPassword}
               helperText={formErrors.confirmPassword}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Box>
         );
@@ -254,7 +267,7 @@ const Register = () => {
               onChange={handleChange}
               error={!!formErrors.firstName}
               helperText={formErrors.firstName}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              autoFocus
             />
             <TextField
               margin="normal"
@@ -267,7 +280,6 @@ const Register = () => {
               onChange={handleChange}
               error={!!formErrors.lastName}
               helperText={formErrors.lastName}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <TextField
               margin="normal"
@@ -280,7 +292,6 @@ const Register = () => {
               onChange={handleChange}
               error={!!formErrors.username}
               helperText={formErrors.username || "This will be your display name"}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <TextField
               margin="normal"
@@ -290,7 +301,6 @@ const Register = () => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Box>
         );
@@ -311,8 +321,19 @@ const Register = () => {
               onChange={handleChange}
               error={!!formErrors.verificationCode}
               helperText={formErrors.verificationCode}
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              autoFocus
             />
+            <Button
+              fullWidth
+              variant="text"
+              onClick={handleResendCode}
+              disabled={resendDisabled}
+              sx={{ mt: 1 }}
+            >
+              {resendDisabled
+                ? `Resend code in ${resendTimer}s`
+                : 'Resend verification code'}
+            </Button>
           </Box>
         );
       default:
@@ -335,54 +356,57 @@ const Register = () => {
             Create Account
           </Typography>
           
-          {/* Social Login Options */}
-          <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Button
-              fullWidth
-              variant="outlined"
-              onClick={handleGoogleSignup}
-              startIcon={<GoogleIcon />}
-              sx={{ 
-                borderColor: '#DB4437', 
-                color: '#DB4437',
-                '&:hover': {
-                  borderColor: '#DB4437',
-                  backgroundColor: 'rgba(219, 68, 55, 0.04)'
-                }
-              }}
-            >
-              Continue with Google
-            </Button>
-            
-            <Button
-              fullWidth
-              variant="outlined"
-              onClick={handleGithubSignup}
-              startIcon={<GitHubIcon />}
-              sx={{ 
-                borderColor: '#333',
-                color: '#333',
-                '&:hover': {
-                  borderColor: '#333',
-                  backgroundColor: 'rgba(51, 51, 51, 0.04)'
-                }
-              }}
-            >
-              Continue with GitHub
-            </Button>
-          </Box>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
-            <Divider sx={{ flexGrow: 1 }} />
-            <Typography variant="body2" sx={{ mx: 2, color: 'text.secondary' }}>
-              Or register with email
-            </Typography>
-            <Divider sx={{ flexGrow: 1 }} />
-          </Box>
+          {activeStep === 0 && (
+            <>
+              <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleGoogleSignup}
+                  startIcon={<GoogleIcon />}
+                  sx={{ 
+                    borderColor: '#DB4437', 
+                    color: '#DB4437',
+                    '&:hover': {
+                      borderColor: '#DB4437',
+                      backgroundColor: 'rgba(219, 68, 55, 0.04)'
+                    }
+                  }}
+                >
+                  Continue with Google
+                </Button>
+                
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleGithubSignup}
+                  startIcon={<GitHubIcon />}
+                  sx={{ 
+                    borderColor: '#333',
+                    color: '#333',
+                    '&:hover': {
+                      borderColor: '#333',
+                      backgroundColor: 'rgba(51, 51, 51, 0.04)'
+                    }
+                  }}
+                >
+                  Continue with GitHub
+                </Button>
+              </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', my: 2 }}>
+                <Divider sx={{ flexGrow: 1 }} />
+                <Typography variant="body2" sx={{ mx: 2, color: 'text.secondary' }}>
+                  Or register with email
+                </Typography>
+                <Divider sx={{ flexGrow: 1 }} />
+              </Box>
+            </>
+          )}
 
-          {error && (
+          {formErrors.submit && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
+              {formErrors.submit}
             </Alert>
           )}
 
@@ -394,14 +418,14 @@ const Register = () => {
             ))}
           </Stepper>
 
-          <Box component="form" sx={{ mt: 1 }}>
+          <Box component="form" noValidate>
             {getStepContent(activeStep)}
-
+            
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
               <Button
-                disabled={activeStep === 0}
                 onClick={handleBack}
-                sx={{ mr: 1 }}
+                disabled={activeStep === 0 || loading}
+                variant="outlined"
               >
                 Back
               </Button>
@@ -413,7 +437,7 @@ const Register = () => {
                 {loading ? (
                   <CircularProgress size={24} />
                 ) : activeStep === steps.length - 1 ? (
-                  'Complete Registration'
+                  'Complete'
                 ) : (
                   'Next'
                 )}
@@ -421,21 +445,18 @@ const Register = () => {
             </Box>
           </Box>
 
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="body2" color="text.secondary" align="center">
-              Already have an account?{' '}
-              <Link to="/login" style={{ textDecoration: 'none' }}>
-                <Typography component="span" color="primary">
-                  Sign in
-                </Typography>
-              </Link>
-            </Typography>
-          </Box>
-          
           {activeStep === 0 && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="text.secondary" align="center">
-                *If you sign up with Google or GitHub, you'll be able to add your phone number and update your profile details later.
+            <Box sx={{ mt: 3, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Already have an account?{' '}
+                <Link
+                  component={RouterLink}
+                  to="/login"
+                  variant="body2"
+                  sx={{ fontWeight: 600 }}
+                >
+                  Sign In
+                </Link>
               </Typography>
             </Box>
           )}

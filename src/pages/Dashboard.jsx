@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { getResumes, deleteResume } from '../services/resumeService';
 import { formatDate } from '../utils/dateUtils';
-import { FileText, Plus, Edit, Trash2, BarChart } from 'lucide-react';
+import { FileText, Plus, Edit, Trash2, BarChart, User, Settings, FileType, Upload, HelpCircle, Star } from 'lucide-react';
 import { 
   Box, 
   Container, 
@@ -16,7 +16,11 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  IconButton
+  IconButton,
+  Tabs,
+  Tab,
+  Avatar,
+  Chip
 } from '@mui/material';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import NewReleasesIcon from '@mui/icons-material/NewReleases';
@@ -26,6 +30,7 @@ const Dashboard = () => {
   const [resumes, setResumes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,53 +77,63 @@ const Dashboard = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="80vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  const quickAccessItems = [
+    { 
+      title: 'Create Resume', 
+      icon: <Plus size={24} />, 
+      description: 'Create a new resume from scratch',
+      link: '/templates',
+      color: '#4f46e5'
+    },
+    { 
+      title: 'AI Resume Analysis', 
+      icon: <BarChart size={24} />, 
+      description: 'Match your resume to job descriptions',
+      link: '/analyzer',
+      color: '#16a34a'
+    },
+    { 
+      title: 'Profile Settings', 
+      icon: <User size={24} />, 
+      description: 'Manage your account settings',
+      link: '/profile',
+      color: '#ea580c'
+    },
+    { 
+      title: 'Help Center', 
+      icon: <HelpCircle size={24} />, 
+      description: 'Get tips and assistance',
+      link: '/guides',
+      color: '#0ea5e9'
+    }
+  ];
+
+  // Add admin panel only for admin users
+  if (user?.role === 'admin') {
+    quickAccessItems.push({
+      title: 'Admin Panel', 
+      icon: <Settings size={24} />, 
+      description: 'Manage site settings and users',
+      link: '/admin',
+      color: '#6b21a8'
+    });
+    
+    quickAccessItems.push({
+      title: 'Manage Templates', 
+      icon: <FileType size={24} />, 
+      description: 'Create and edit resume templates',
+      link: '/admin/templates',
+      color: '#c026d3'
+    });
   }
 
-  return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box mb={4}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Welcome, {user?.firstName || 'User'}!
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Manage your resumes and track your applications
-        </Typography>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      <Box mb={4}>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Plus />}
-          onClick={handleCreateResume}
-          size="large"
-        >
-          Create New Resume
-        </Button>
-      </Box>
-
-      <Typography variant="h5" component="h2" gutterBottom>
-        Your Resumes
-      </Typography>
-
-      {resumes.length === 0 ? (
+  const renderResumesTab = () => {
+    if (resumes.length === 0) {
+      return (
         <Paper
           sx={{
             p: 4,
@@ -141,49 +156,205 @@ const Dashboard = () => {
             Create Resume
           </Button>
         </Paper>
-      ) : (
-        <Grid container spacing={3}>
-          {resumes.map(resume => (
-            <Grid item xs={12} sm={6} md={4} key={resume._id}>
-              <Card>
+      );
+    }
+
+    return (
+      <Grid container spacing={3}>
+        {resumes.map(resume => (
+          <Grid item xs={12} sm={6} md={4} key={resume._id}>
+            <Card
+              sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'transform 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 3,
+                }
+              }}
+            >
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={2}>
+                  <FileText size={24} style={{ marginRight: '12px' }} />
+                  <Typography variant="h6" component="h3" noWrap>
+                    {resume.title}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Last updated: {formatDate(resume.updatedAt)}
+                </Typography>
+                <Box mt={2} display="flex" justifyContent="space-between">
+                  <IconButton
+                    onClick={() => handleEditResume(resume._id)}
+                    title="Edit Resume"
+                  >
+                    <Edit />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handleAnalyzeResume(resume._id)}
+                    title="Analyze Resume"
+                    color="primary"
+                  >
+                    <BarChart />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handleDeleteResume(resume._id)}
+                    title="Delete Resume"
+                    color="error"
+                  >
+                    <Trash2 />
+                  </IconButton>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    );
+  };
+
+  const renderProfileTab = () => {
+    return (
+      <Box>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Box display="flex" alignItems="center" mb={2}>
+            <Avatar 
+              src={user?.avatar || ''} 
+              alt={`${user?.firstName} ${user?.lastName}`}
+              sx={{ width: 80, height: 80, mr: 3 }}
+            />
+            <Box>
+              <Typography variant="h5" gutterBottom>
+                {user?.firstName} {user?.lastName}
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                {user?.email}
+              </Typography>
+              {user?.role === 'admin' && (
+                <Chip 
+                  label="Admin" 
+                  color="primary" 
+                  size="small" 
+                  sx={{ mt: 1 }}
+                />
+              )}
+            </Box>
+          </Box>
+          <Button 
+            variant="outlined" 
+            component={Link} 
+            to="/profile"
+            startIcon={<Edit />}
+          >
+            Edit Profile
+          </Button>
+        </Paper>
+
+        <Typography variant="h6" gutterBottom>
+          Quick Access
+        </Typography>
+        <Grid container spacing={2}>
+          {quickAccessItems.map((item, index) => (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <Card 
+                sx={{ 
+                  cursor: 'pointer',
+                  borderTop: `4px solid ${item.color}`,
+                  '&:hover': {
+                    boxShadow: 3,
+                  }
+                }}
+                onClick={() => navigate(item.link)}
+              >
                 <CardContent>
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <FileText size={24} style={{ marginRight: '12px' }} />
-                    <Typography variant="h6" component="h3" noWrap>
-                      {resume.title}
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <Box 
+                      sx={{ 
+                        color: 'white', 
+                        p: 1, 
+                        borderRadius: 1,
+                        backgroundColor: item.color,
+                        mr: 2
+                      }}
+                    >
+                      {item.icon}
+                    </Box>
+                    <Typography variant="h6">
+                      {item.title}
                     </Typography>
                   </Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Last updated: {formatDate(resume.updatedAt)}
+                  <Typography variant="body2" color="text.secondary">
+                    {item.description}
                   </Typography>
-                  <Box mt={2} display="flex" justifyContent="space-between">
-                    <IconButton
-                      onClick={() => handleEditResume(resume._id)}
-                      title="Edit Resume"
-                    >
-                      <Edit />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleAnalyzeResume(resume._id)}
-                      title="Analyze Resume"
-                      color="primary"
-                    >
-                      <BarChart />
-                    </IconButton>
-                    <IconButton
-                      onClick={() => handleDeleteResume(resume._id)}
-                      title="Delete Resume"
-                      color="error"
-                    >
-                      <Trash2 />
-                    </IconButton>
-                  </Box>
                 </CardContent>
               </Card>
             </Grid>
           ))}
         </Grid>
+      </Box>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="80vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box mb={4}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Welcome, {user?.firstName || 'User'}!
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary">
+          Manage your resumes and career resources
+        </Typography>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
       )}
+
+      <Tabs
+        value={activeTab}
+        onChange={handleTabChange}
+        sx={{ mb: 3 }}
+        centered
+      >
+        <Tab label="My Resumes" />
+        <Tab label="Profile & Settings" />
+      </Tabs>
+
+      {activeTab === 0 && (
+        <>
+          <Box mb={4} display="flex" justifyContent="flex-end">
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Plus />}
+              onClick={handleCreateResume}
+              size="large"
+            >
+              Create New Resume
+            </Button>
+          </Box>
+          {renderResumesTab()}
+        </>
+      )}
+
+      {activeTab === 1 && renderProfileTab()}
 
       <Paper sx={{ mt: 4, p: 3 }}>
         <Typography variant="h6" gutterBottom>

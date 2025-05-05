@@ -17,6 +17,7 @@ import NotFound from '../pages/NotFound';
 import OAuthCallback from '../pages/OAuthCallback';
 import ResumeAnalyzerPage from '../pages/ResumeAnalyzerPage';
 import ResumeAnalyzer from '../pages/ResumeAnalyzer';
+import TemplateManager from '../pages/admin/TemplateManager';
 import ProtectedRoute from '../components/ProtectedRoute';
 
 const AppRoutes = () => {
@@ -42,6 +43,9 @@ const AppRoutes = () => {
         <Route path="/profile" element={<Profile />} />
         <Route path="/analyzer/:resumeId" element={<ResumeAnalyzerPage />} />
         <Route path="/analyzer" element={<ResumeAnalyzer />} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin/templates" element={<TemplateManager />} />
       </Route>
       
       {/* 404 Route */}

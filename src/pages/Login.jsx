@@ -20,7 +20,8 @@ import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import { login } from '../features/auth/authSlice';
+import { login, verifyEmail } from '../redux/actions/authActions';
+import { Link as RouterLink } from 'react-router-dom';
 
 const Login = () => {
   const theme = useTheme();
@@ -34,33 +35,53 @@ const Login = () => {
 
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    verificationCode: ''
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isVerification, setIsVerification] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [formError, setFormError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    setFormError(''); // Clear error when user types
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = await dispatch(login(formData));
-    if (!result.error) {
-      navigate(redirectPath);
+    setFormError('');
+
+    try {
+      if (isVerification) {
+        const result = await dispatch(verifyEmail({ userId, otp: formData.verificationCode })).unwrap();
+        if (result.token) {
+          navigate(redirectPath);
+        }
+      } else {
+        const result = await dispatch(login(formData)).unwrap();
+        if (result.userId && !result.token) {
+          // Need verification
+          setIsVerification(true);
+          setUserId(result.userId);
+        } else if (result.token) {
+          navigate(redirectPath);
+        }
+      }
+    } catch (err) {
+      setFormError(err.message || 'An error occurred during login');
     }
   };
 
   const handleGoogleLogin = () => {
-    // Store the redirect path before redirecting to OAuth
     localStorage.setItem('redirectAfterAuth', redirectPath);
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
   };
 
   const handleGithubLogin = () => {
-    // Store the redirect path before redirecting to OAuth
     localStorage.setItem('redirectAfterAuth', redirectPath);
     window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
   };
@@ -86,6 +107,8 @@ const Login = () => {
           }}
         >
           <Box
+            component="form"
+            onSubmit={handleSubmit}
             sx={{
               display: 'flex',
               flexDirection: 'column',
@@ -98,207 +121,129 @@ const Login = () => {
               gutterBottom
               sx={{ fontWeight: 700 }}
             >
-              Welcome Back
+              {isVerification ? 'Verify Email' : 'Welcome Back'}
             </Typography>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              align="center"
-              sx={{ mb: 4 }}
-            >
-              Sign in to continue building your professional resume
-            </Typography>
-
-            {error && (
-              <Alert
-                severity="error"
-                sx={{
-                  mb: 3,
-                  width: '100%',
-                  borderRadius: 2,
-                }}
-              >
-                {error}
+            
+            {formError && (
+              <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+                {formError}
               </Alert>
             )}
 
-            <Stack spacing={2} sx={{ width: '100%', mb: 3 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                onClick={handleGoogleLogin}
-                startIcon={<GoogleIcon />}
-                sx={{
-                  py: 1.5,
-                  borderRadius: 2,
-                  borderColor: 'divider',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                    bgcolor: 'primary.light',
-                  },
-                }}
-              >
-                Continue with Google
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                size="large"
-                onClick={handleGithubLogin}
-                startIcon={<GitHubIcon />}
-                sx={{
-                  py: 1.5,
-                  borderRadius: 2,
-                  borderColor: 'divider',
-                  '&:hover': {
-                    borderColor: 'primary.main',
-                    bgcolor: 'primary.light',
-                  },
-                }}
-              >
-                Continue with GitHub
-              </Button>
-            </Stack>
+            {isVerification ? (
+              <>
+                <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 4 }}>
+                  Please enter the verification code sent to your email
+                </Typography>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="verificationCode"
+                  label="Verification Code"
+                  type="text"
+                  id="verificationCode"
+                  value={formData.verificationCode}
+                  onChange={handleChange}
+                  autoFocus
+                />
+              </>
+            ) : (
+              <>
+                <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 4 }}>
+                  Sign in to continue building your professional resume
+                </Typography>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="email"
+                  label="Email Address"
+                  name="email"
+                  autoComplete="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  autoFocus
+                />
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="password"
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  autoComplete="current-password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowPassword(!showPassword)}
+                          edge="end"
+                        >
+                          {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </>
+            )}
 
-            <Divider sx={{ width: '100%', mb: 3 }}>
-              <Typography color="text.secondary" variant="body2">
-                OR
-              </Typography>
-            </Divider>
-
-            <Box
-              component="form"
-              onSubmit={handleSubmit}
-              sx={{ width: '100%' }}
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2, py: 1.5, fontSize: '1rem' }}
+              disabled={loading}
             >
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email Address"
-                name="email"
-                autoComplete="email"
-                autoFocus
-                value={formData.email}
-                onChange={handleChange}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                  },
-                }}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                autoComplete="current-password"
-                value={formData.password}
-                onChange={handleChange}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                      >
-                        {showPassword ? (
-                          <VisibilityOffIcon />
-                        ) : (
-                          <VisibilityIcon />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                  },
-                }}
-              />
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                isVerification ? 'Verify' : 'Sign In'
+              )}
+            </Button>
 
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                size="large"
-                disabled={loading}
-                sx={{
-                  mt: 3,
-                  mb: 2,
-                  py: 1.5,
-                  borderRadius: 2,
-                  position: 'relative',
-                }}
-              >
-                {loading ? (
-                  <CircularProgress
-                    size={24}
-                    sx={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      marginTop: '-12px',
-                      marginLeft: '-12px',
-                    }}
-                  />
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
-
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-                sx={{ mt: 2 }}
-              >
-                <Link
-                  to="/forgot-password"
-                  style={{ textDecoration: 'none' }}
-                >
-                  <Typography
-                    variant="body2"
-                    color="primary"
-                    sx={{
-                      '&:hover': {
-                        textDecoration: 'underline',
-                      },
-                    }}
+            {!isVerification && (
+              <>
+                <Stack direction="row" spacing={1} sx={{ width: '100%', mb: 2 }}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={handleGoogleLogin}
+                    startIcon={<GoogleIcon />}
+                    sx={{ py: 1.5 }}
                   >
-                    Forgot password?
-                  </Typography>
-                </Link>
-                <Box>
+                    Google
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={handleGithubLogin}
+                    startIcon={<GitHubIcon />}
+                    sx={{ py: 1.5 }}
+                  >
+                    GitHub
+                  </Button>
+                </Stack>
+
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
                   <Typography variant="body2" color="text.secondary">
                     Don't have an account?{' '}
                     <Link
+                      component={RouterLink}
                       to="/register"
-                      style={{ textDecoration: 'none' }}
+                      variant="body2"
+                      sx={{ fontWeight: 600 }}
                     >
-                      <Typography
-                        component="span"
-                        color="primary"
-                        sx={{
-                          fontWeight: 500,
-                          '&:hover': {
-                            textDecoration: 'underline',
-                          },
-                        }}
-                      >
-                        Sign up
-                      </Typography>
+                      Sign Up
                     </Link>
                   </Typography>
                 </Box>
-              </Stack>
-            </Box>
+              </>
+            )}
           </Box>
         </Paper>
       </Container>

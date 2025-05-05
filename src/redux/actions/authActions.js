@@ -27,6 +27,19 @@ export const verifyEmail = createAsyncThunk(
   }
 );
 
+// Resend OTP
+export const resendOTP = createAsyncThunk(
+  'auth/resendOTP',
+  async ({ userId }, { rejectWithValue }) => {
+    try {
+      const response = await authService.resendOTP(userId);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to resend verification code');
+    }
+  }
+);
+
 // Login User
 export const login = createAsyncThunk(
   'auth/login',
