@@ -1,11 +1,14 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/auth.service';
+import firebaseAuthService from '../../services/firebaseAuth.service';
 
 // Register User
 export const register = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
+      // For now, we'll skip Firebase registration due to configuration issues
+      // and just use our backend API
       const response = await authService.register(userData);
       return response;
     } catch (error) {
@@ -45,9 +48,12 @@ export const login = createAsyncThunk(
   'auth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
+      // Skip Firebase authentication for now due to configuration issues
+      // Just use our backend API
       const data = await authService.login(email, password);
       return data;
     } catch (error) {
+      console.error("Login error in action:", error);
       return rejectWithValue(error.response?.data?.message || 'Login failed');
     }
   }
@@ -56,12 +62,13 @@ export const login = createAsyncThunk(
 // Google OAuth Login
 export const loginWithGoogle = createAsyncThunk(
   'auth/loginWithGoogle',
-  async (token, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const data = await authService.loginWithGoogle(token);
-      return data;
+      // Temporarily redirect to the Google OAuth endpoint from our backend
+      window.location.href = `${import.meta.env.VITE_API_URL || ''}/auth/google`;
+      return {};
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Google login failed');
+      return rejectWithValue(error.message || 'Google login failed');
     }
   }
 );
@@ -69,12 +76,13 @@ export const loginWithGoogle = createAsyncThunk(
 // GitHub OAuth Login
 export const loginWithGithub = createAsyncThunk(
   'auth/loginWithGithub',
-  async (code, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const data = await authService.loginWithGithub(code);
-      return data;
+      // Temporarily redirect to the GitHub OAuth endpoint from our backend
+      window.location.href = `${import.meta.env.VITE_API_URL || ''}/auth/github`;
+      return {};
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'GitHub login failed');
+      return rejectWithValue(error.message || 'GitHub login failed');
     }
   }
 );
@@ -87,7 +95,7 @@ export const logout = createAsyncThunk(
       await authService.logout();
       return null;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Logout failed');
+      return rejectWithValue(error.message || 'Logout failed');
     }
   }
 );

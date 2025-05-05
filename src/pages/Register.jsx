@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link as RouterLink, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -16,13 +16,17 @@ import {
   IconButton,
   useTheme,
   InputAdornment,
-  Link
+  Link,
+  Snackbar,
+  Slide
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { register, verifyEmail, resendOTP } from '../redux/actions/authActions';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { register, verifyEmail, resendOTP, loginWithGoogle, loginWithGithub } from '../redux/actions/authActions';
+import { Visibility, VisibilityOff, Person, Email, Phone, VpnKey } from '@mui/icons-material';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase/firebaseConfig';
 
 // Steps for manual registration
 const steps = ['Account Details', 'Personal Information', 'Verification'];
@@ -53,6 +57,21 @@ const Register = () => {
   const [formErrors, setFormErrors] = useState({});
   const [resendDisabled, setResendDisabled] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is signed in, redirect to dashboard
+        navigate(redirectPath);
+      }
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, [navigate, redirectPath]);
 
   const handleChange = (e) => {
     setFormData({
@@ -109,6 +128,10 @@ const Register = () => {
     return errors;
   };
 
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
+
   const handleNext = async () => {
     const errors = validateStep(activeStep);
     if (Object.keys(errors).length > 0) {
@@ -152,7 +175,12 @@ const Register = () => {
         })).unwrap();
         
         if (result.token) {
-          navigate(redirectPath);
+          setSnackbarMessage('Account verified successfully! Redirecting to dashboard...');
+          setSnackbarOpen(true);
+          
+          setTimeout(() => {
+            navigate(redirectPath);
+          }, 1500);
         }
       }
     } catch (err) {
@@ -179,19 +207,30 @@ const Register = () => {
           clearInterval(timer);
         }
       }, 1000);
+      
+      setSnackbarMessage('Verification code resent to your email');
+      setSnackbarOpen(true);
     } catch (err) {
       setFormErrors({ submit: err.message || 'Failed to resend code' });
     }
   };
 
-  const handleGoogleSignup = () => {
-    localStorage.setItem('redirectAfterAuth', redirectPath);
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+  const handleGoogleSignup = async () => {
+    try {
+      await dispatch(loginWithGoogle()).unwrap();
+      navigate(redirectPath);
+    } catch (err) {
+      setFormErrors({ submit: err.message || 'Google signup failed' });
+    }
   };
 
-  const handleGithubSignup = () => {
-    localStorage.setItem('redirectAfterAuth', redirectPath);
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
+  const handleGithubSignup = async () => {
+    try {
+      await dispatch(loginWithGithub()).unwrap();
+      navigate(redirectPath);
+    } catch (err) {
+      setFormErrors({ submit: err.message || 'GitHub signup failed' });
+    }
   };
 
   const getStepContent = (step) => {
@@ -212,6 +251,18 @@ const Register = () => {
               error={!!formErrors.email}
               helperText={formErrors.email}
               autoFocus
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Email color="primary" />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
             <TextField
               margin="normal"
@@ -226,6 +277,11 @@ const Register = () => {
               error={!!formErrors.password}
               helperText={formErrors.password}
               InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <VpnKey color="primary" />
+                  </InputAdornment>
+                ),
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
@@ -236,6 +292,11 @@ const Register = () => {
                     </IconButton>
                   </InputAdornment>
                 ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
               }}
             />
             <TextField
@@ -250,6 +311,18 @@ const Register = () => {
               onChange={handleChange}
               error={!!formErrors.confirmPassword}
               helperText={formErrors.confirmPassword}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <VpnKey color="primary" />
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
           </Box>
         );
@@ -268,6 +341,18 @@ const Register = () => {
               error={!!formErrors.firstName}
               helperText={formErrors.firstName}
               autoFocus
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Person color="primary" />
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
             <TextField
               margin="normal"
@@ -280,6 +365,18 @@ const Register = () => {
               onChange={handleChange}
               error={!!formErrors.lastName}
               helperText={formErrors.lastName}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Person color="primary" />
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
             <TextField
               margin="normal"
@@ -292,6 +389,18 @@ const Register = () => {
               onChange={handleChange}
               error={!!formErrors.username}
               helperText={formErrors.username || "This will be your display name"}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Person color="primary" />
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
             <TextField
               margin="normal"
@@ -301,13 +410,25 @@ const Register = () => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Phone color="primary" />
+                  </InputAdornment>
+                )
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
           </Box>
         );
       case 2:
         return (
           <Box>
-            <Typography variant="body1" gutterBottom>
+            <Typography variant="body1" gutterBottom sx={{ mb: 2 }}>
               Please check your email for the verification code.
             </Typography>
             <TextField
@@ -322,13 +443,22 @@ const Register = () => {
               error={!!formErrors.verificationCode}
               helperText={formErrors.verificationCode}
               autoFocus
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                }
+              }}
             />
             <Button
               fullWidth
-              variant="text"
+              variant="outlined"
               onClick={handleResendCode}
               disabled={resendDisabled}
-              sx={{ mt: 1 }}
+              sx={{ 
+                mt: 2,
+                borderRadius: 2,
+                color: theme.palette.primary.main
+              }}
             >
               {resendDisabled
                 ? `Resend code in ${resendTimer}s`
@@ -342,17 +472,46 @@ const Register = () => {
   };
 
   return (
-    <Container component="main" maxWidth="sm">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+        py: 4,
+      }}
+    >
+      <Container component="main" maxWidth="sm">
+        <Paper 
+          elevation={24} 
+          sx={{ 
+            p: 4, 
+            width: '100%',
+            borderRadius: 4,
+            backdropFilter: 'blur(20px)',
+            background: 'rgba(255, 255, 255, 0.9)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            transform: 'translateY(0)',
+            transition: 'transform 0.3s ease-in-out',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+            }
+          }}
+        >
+          <Typography 
+            component="h1" 
+            variant="h4" 
+            align="center" 
+            gutterBottom
+            sx={{ 
+              fontWeight: 700,
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              backgroundClip: 'text',
+              textFillColor: 'transparent',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
             Create Account
           </Typography>
           
@@ -365,6 +524,8 @@ const Register = () => {
                   onClick={handleGoogleSignup}
                   startIcon={<GoogleIcon />}
                   sx={{ 
+                    py: 1.2,
+                    borderRadius: 2,
                     borderColor: '#DB4437', 
                     color: '#DB4437',
                     '&:hover': {
@@ -382,6 +543,8 @@ const Register = () => {
                   onClick={handleGithubSignup}
                   startIcon={<GitHubIcon />}
                   sx={{ 
+                    py: 1.2,
+                    borderRadius: 2,
                     borderColor: '#333',
                     color: '#333',
                     '&:hover': {
@@ -405,12 +568,33 @@ const Register = () => {
           )}
 
           {formErrors.submit && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                borderRadius: 2,
+                '& .MuiAlert-icon': {
+                  color: theme.palette.error.main
+                }
+              }}
+              onClose={() => setFormErrors({ ...formErrors, submit: '' })}
+            >
               {formErrors.submit}
             </Alert>
           )}
 
-          <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
+          <Stepper 
+            activeStep={activeStep} 
+            sx={{ 
+              mb: 4,
+              '& .MuiStepLabel-root .Mui-completed': {
+                color: theme.palette.success.main,
+              },
+              '& .MuiStepLabel-root .Mui-active': {
+                color: theme.palette.primary.main,
+              }
+            }}
+          >
             {steps.map((label) => (
               <Step key={label}>
                 <StepLabel>{label}</StepLabel>
@@ -420,12 +604,16 @@ const Register = () => {
 
           <Box component="form" noValidate>
             {getStepContent(activeStep)}
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
               <Button
                 onClick={handleBack}
                 disabled={activeStep === 0 || loading}
                 variant="outlined"
+                sx={{ 
+                  borderRadius: 2,
+                  px: 3
+                }}
               >
                 Back
               </Button>
@@ -433,6 +621,17 @@ const Register = () => {
                 variant="contained"
                 onClick={handleNext}
                 disabled={loading}
+                sx={{ 
+                  borderRadius: 2,
+                  px: 3,
+                  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.15)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                  }
+                }}
               >
                 {loading ? (
                   <CircularProgress size={24} />
@@ -444,7 +643,7 @@ const Register = () => {
               </Button>
             </Box>
           </Box>
-
+          
           {activeStep === 0 && (
             <Box sx={{ mt: 3, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
@@ -453,7 +652,14 @@ const Register = () => {
                   component={RouterLink}
                   to="/login"
                   variant="body2"
-                  sx={{ fontWeight: 600 }}
+                  sx={{ 
+                    fontWeight: 600,
+                    color: theme.palette.primary.main,
+                    transition: 'color 0.2s',
+                    '&:hover': {
+                      color: theme.palette.secondary.main,
+                    }
+                  }}
                 >
                   Sign In
                 </Link>
@@ -461,8 +667,17 @@ const Register = () => {
             </Box>
           )}
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+      
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+        TransitionComponent={Slide}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
+    </Box>
   );
 };
 

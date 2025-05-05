@@ -181,7 +181,7 @@ const LandingPage = () => {
       {/* Header */}
       <header ref={headerRef} className="header">
         <div className="logo">
-          <span className="logo-text">ResumeAI</span>
+          <span className="logo-text">ResumeForge</span>
           <span className="logo-dot"></span>
         </div>
         <nav className="nav">
@@ -351,7 +351,7 @@ const LandingPage = () => {
         <div className="testimonials-grid">
           <div className="testimonial">
             <div className="testimonial-content">
-              <p>"Within two weeks of optimizing my resume with ResumeAI, I landed three interviews and ultimately received my dream job offer at a Fortune 500 company."</p>
+              <p>"Within two weeks of optimizing my resume with ResumeForge, I landed three interviews and ultimately received my dream job offer at a Fortune 500 company."</p>
             </div>
             <div className="testimonial-author">
               <img src="/api/placeholder/60/60" alt="User" className="author-image" loading="lazy" />
@@ -364,7 +364,7 @@ const LandingPage = () => {
           
           <div className="testimonial">
             <div className="testimonial-content">
-              <p>"The keyword matching feature helped me understand exactly what recruiters were looking for. My interview rate jumped from 5% to over 30% after using ResumeAI!"</p>
+              <p>"The keyword matching feature helped me understand exactly what recruiters were looking for. My interview rate jumped from 5% to over 30% after using ResumeForge!"</p>
             </div>
             <div className="testimonial-author">
               <img src="/api/placeholder/60/60" alt="User" className="author-image" loading="lazy" />
@@ -502,7 +502,7 @@ const LandingPage = () => {
         <div className="footer-top">
           <div className="footer-column">
             <div className="logo">
-              <span className="logo-text">ResumeAI</span>
+              <span className="logo-text">ResumeForge</span>
               <span className="logo-dot"></span>
             </div>
             <p>AI-powered resume optimization to help you land your dream job.</p>

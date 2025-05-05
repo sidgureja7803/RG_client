@@ -15,12 +15,16 @@ import {
   IconButton,
   InputAdornment,
   useTheme,
+  Snackbar,
+  Slide
 } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import { login, verifyEmail } from '../redux/actions/authActions';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import { login, verifyEmail, loginWithGoogle, loginWithGithub } from '../redux/actions/authActions';
 import { Link as RouterLink } from 'react-router-dom';
 
 const Login = () => {
@@ -42,6 +46,10 @@ const Login = () => {
   const [isVerification, setIsVerification] = useState(false);
   const [userId, setUserId] = useState(null);
   const [formError, setFormError] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
+  const [showResetField, setShowResetField] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -49,6 +57,10 @@ const Login = () => {
       [e.target.name]: e.target.value
     });
     setFormError(''); // Clear error when user types
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   const handleSubmit = async (e) => {
@@ -62,7 +74,11 @@ const Login = () => {
           navigate(redirectPath);
         }
       } else {
-        const result = await dispatch(login(formData)).unwrap();
+        const result = await dispatch(login({
+          email: formData.email,
+          password: formData.password
+        })).unwrap();
+        
         if (result.userId && !result.token) {
           // Need verification
           setIsVerification(true);
@@ -72,18 +88,46 @@ const Login = () => {
         }
       }
     } catch (err) {
+      console.error("Login error:", err);
       setFormError(err.message || 'An error occurred during login');
     }
   };
 
-  const handleGoogleLogin = () => {
-    localStorage.setItem('redirectAfterAuth', redirectPath);
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
+  const handleGoogleLogin = async () => {
+    try {
+      await dispatch(loginWithGoogle()).unwrap();
+      // Navigation is handled by the redirect
+    } catch (err) {
+      setFormError(err.message || 'Google login failed');
+    }
   };
 
-  const handleGithubLogin = () => {
-    localStorage.setItem('redirectAfterAuth', redirectPath);
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/github`;
+  const handleGithubLogin = async () => {
+    try {
+      await dispatch(loginWithGithub()).unwrap();
+      // Navigation is handled by the redirect
+    } catch (err) {
+      setFormError(err.message || 'GitHub login failed');
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetEmail) {
+      setFormError('Please enter your email address');
+      return;
+    }
+    
+    try {
+      // Temporarily disable Firebase reset password
+      // await firebaseAuthService.resetPassword(resetEmail);
+      
+      // Show a message saying this feature is temporarily disabled
+      setSnackbarMessage('Password reset is temporarily disabled. Please contact support.');
+      setSnackbarOpen(true);
+      setShowResetField(false);
+    } catch (err) {
+      setFormError(err.message || 'Failed to send reset email');
+    }
   };
 
   return (
@@ -92,7 +136,7 @@ const Login = () => {
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
-        background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
+        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
         py: 4,
       }}
     >
@@ -104,6 +148,12 @@ const Login = () => {
             borderRadius: 4,
             backdropFilter: 'blur(20px)',
             background: 'rgba(255, 255, 255, 0.9)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            transform: 'translateY(0)',
+            transition: 'transform 0.3s ease-in-out',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+            }
           }}
         >
           <Box
@@ -119,13 +169,31 @@ const Login = () => {
               component="h1"
               variant="h4"
               gutterBottom
-              sx={{ fontWeight: 700 }}
+              sx={{ 
+                fontWeight: 700,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: 'text',
+                textFillColor: 'transparent',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
             >
               {isVerification ? 'Verify Email' : 'Welcome Back'}
             </Typography>
             
             {formError && (
-              <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  width: '100%', 
+                  mb: 2,
+                  borderRadius: 2,
+                  '& .MuiAlert-icon': {
+                    color: theme.palette.error.main
+                  }
+                }}
+                onClose={() => setFormError('')}
+              >
                 {formError}
               </Alert>
             )}
@@ -146,6 +214,11 @@ const Login = () => {
                   value={formData.verificationCode}
                   onChange={handleChange}
                   autoFocus
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                    }
+                  }}
                 />
               </>
             ) : (
@@ -164,6 +237,18 @@ const Login = () => {
                   value={formData.email}
                   onChange={handleChange}
                   autoFocus
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <EmailOutlinedIcon color="primary" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                    }
+                  }}
                 />
                 <TextField
                   margin="normal"
@@ -177,6 +262,11 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LockOutlinedIcon color="primary" />
+                      </InputAdornment>
+                    ),
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
@@ -188,7 +278,66 @@ const Login = () => {
                       </InputAdornment>
                     ),
                   }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                    }
+                  }}
                 />
+                
+                {showResetField ? (
+                  <Box sx={{ width: '100%', mt: 2 }}>
+                    <TextField
+                      margin="normal"
+                      fullWidth
+                      name="resetEmail"
+                      label="Enter your email"
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                        }
+                      }}
+                    />
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                      <Button
+                        onClick={handleResetPassword}
+                        variant="outlined"
+                        size="small"
+                      >
+                        Send Reset Link
+                      </Button>
+                      <Button
+                        onClick={() => setShowResetField(false)}
+                        variant="text"
+                        size="small"
+                        color="inherit"
+                      >
+                        Cancel
+                      </Button>
+                    </Box>
+                  </Box>
+                ) : (
+                  <Box sx={{ width: '100%', textAlign: 'right', mt: 1 }}>
+                    <Button
+                      onClick={() => setShowResetField(true)}
+                      variant="text"
+                      size="small"
+                      sx={{ 
+                        fontSize: '0.85rem',
+                        color: theme.palette.text.secondary,
+                        '&:hover': {
+                          color: theme.palette.primary.main,
+                          background: 'transparent'
+                        }
+                      }}
+                    >
+                      Forgot password?
+                    </Button>
+                  </Box>
+                )}
               </>
             )}
 
@@ -196,7 +345,20 @@ const Login = () => {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2, py: 1.5, fontSize: '1rem' }}
+              sx={{ 
+                mt: 3, 
+                mb: 2, 
+                py: 1.5, 
+                fontSize: '1rem',
+                borderRadius: 2,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.15)',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                }
+              }}
               disabled={loading}
             >
               {loading ? (
@@ -208,13 +370,30 @@ const Login = () => {
 
             {!isVerification && (
               <>
-                <Stack direction="row" spacing={1} sx={{ width: '100%', mb: 2 }}>
+                <Box sx={{ position: 'relative', width: '100%', mb: 3, mt: 1 }}>
+                  <Divider sx={{ my: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ px: 1 }}>
+                      or continue with
+                    </Typography>
+                  </Divider>
+                </Box>
+                
+                <Stack direction="row" spacing={2} sx={{ width: '100%', mb: 3 }}>
                   <Button
                     fullWidth
                     variant="outlined"
                     onClick={handleGoogleLogin}
                     startIcon={<GoogleIcon />}
-                    sx={{ py: 1.5 }}
+                    sx={{ 
+                      py: 1.5, 
+                      borderRadius: 2,
+                      borderColor: '#DB4437',
+                      color: '#DB4437',
+                      '&:hover': {
+                        borderColor: '#DB4437',
+                        backgroundColor: 'rgba(219, 68, 55, 0.05)'
+                      }
+                    }}
                   >
                     Google
                   </Button>
@@ -223,7 +402,16 @@ const Login = () => {
                     variant="outlined"
                     onClick={handleGithubLogin}
                     startIcon={<GitHubIcon />}
-                    sx={{ py: 1.5 }}
+                    sx={{ 
+                      py: 1.5,
+                      borderRadius: 2,
+                      borderColor: '#333',
+                      color: '#333',
+                      '&:hover': {
+                        borderColor: '#333',
+                        backgroundColor: 'rgba(51, 51, 51, 0.05)'
+                      }
+                    }}
                   >
                     GitHub
                   </Button>
@@ -236,7 +424,14 @@ const Login = () => {
                       component={RouterLink}
                       to="/register"
                       variant="body2"
-                      sx={{ fontWeight: 600 }}
+                      sx={{ 
+                        fontWeight: 600,
+                        color: theme.palette.primary.main,
+                        transition: 'color 0.2s',
+                        '&:hover': {
+                          color: theme.palette.secondary.main,
+                        }
+                      }}
                     >
                       Sign Up
                     </Link>
@@ -247,6 +442,15 @@ const Login = () => {
           </Box>
         </Paper>
       </Container>
+      
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+        TransitionComponent={Slide}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 };
