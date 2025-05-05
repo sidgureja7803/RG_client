@@ -14,6 +14,19 @@ export const register = createAsyncThunk(
   }
 );
 
+// Verify Email
+export const verifyEmail = createAsyncThunk(
+  'auth/verifyEmail',
+  async ({ userId, otp }, { rejectWithValue }) => {
+    try {
+      const response = await authService.verifyEmail(userId, otp);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Verification failed');
+    }
+  }
+);
+
 // Login User
 export const login = createAsyncThunk(
   'auth/login',

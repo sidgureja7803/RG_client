@@ -14,10 +14,14 @@ import {
   CircularProgress,
   Divider,
   IconButton,
-  useTheme
+  useTheme,
+  InputAdornment
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { register } from '../redux/actions/authActions';
+import { register, verifyEmail } from '../redux/actions/authActions';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+import GoogleIcon from '@mui/icons-material/Google';
+import GitHubIcon from '@mui/icons-material/GitHub';
 
 // Steps for manual registration
 const steps = ['Account Details', 'Personal Information', 'Verification'];
@@ -33,59 +37,129 @@ const Register = () => {
   const redirectPath = location.state?.redirectTo || '/dashboard';
 
   const [activeStep, setActiveStep] = useState(0);
+  const [userId, setUserId] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
+    username: '',
     firstName: '',
     lastName: '',
     phone: '',
     verificationCode: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+    
+    // Generate username from first and last name
+    if (e.target.name === 'firstName' || e.target.name === 'lastName') {
+      const firstName = e.target.name === 'firstName' ? e.target.value : formData.firstName;
+      const lastName = e.target.name === 'lastName' ? e.target.value : formData.lastName;
+      
+      if (firstName && lastName) {
+        // Create username from first name and last name, lowercase and remove spaces
+        const generatedUsername = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/\s+/g, '');
+        setFormData(prevData => ({
+          ...prevData,
+          username: generatedUsername
+        }));
+      }
+    }
+    
+    // Clear error when user starts typing
+    if (formErrors[e.target.name]) {
+      setFormErrors({
+        ...formErrors,
+        [e.target.name]: ''
+      });
+    }
+  };
+
+  const validateStep = (step) => {
+    const errors = {};
+    switch (step) {
+      case 0:
+        if (!formData.email) errors.email = 'Email is required';
+        if (!formData.password) errors.password = 'Password is required';
+        if (formData.password !== formData.confirmPassword) {
+          errors.confirmPassword = 'Passwords do not match';
+        }
+        break;
+      case 1:
+        if (!formData.firstName) errors.firstName = 'First name is required';
+        if (!formData.lastName) errors.lastName = 'Last name is required';
+        if (!formData.username) errors.username = 'Username is required';
+        break;
+      case 2:
+        if (!formData.verificationCode) errors.verificationCode = 'Verification code is required';
+        break;
+      default:
+        break;
+    }
+    return errors;
   };
 
   const handleNext = async () => {
+    const errors = validateStep(activeStep);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
     if (activeStep === 0) {
-      if (formData.password !== formData.confirmPassword) {
-        setFormErrors({ ...formErrors, confirmPassword: 'Passwords do not match' });
-        return;
-      }
-      // Validate first step
-      if (!formData.email || !formData.password || !formData.confirmPassword) {
-        setFormErrors({ ...formErrors, email: 'Please fill in all fields' });
-        return;
-      }
+      setActiveStep(1);
     } else if (activeStep === 1) {
-      // Validate second step
-      if (!formData.firstName || !formData.lastName) {
-        setFormErrors({ ...formErrors, firstName: 'Please fill in all required fields', lastName: 'Please fill in all required fields' });
-        return;
+      try {
+        const result = await dispatch(register({
+          email: formData.email,
+          password: formData.password,
+          username: formData.username,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone
+        })).unwrap();
+        
+        if (result.userId) {
+          setUserId(result.userId);
+          setActiveStep(2);
+          // Start resend timer
+          setResendDisabled(true);
+          let timeLeft = 60;
+          setResendTimer(timeLeft);
+          const timer = setInterval(() => {
+            timeLeft -= 1;
+            setResendTimer(timeLeft);
+            if (timeLeft === 0) {
+              setResendDisabled(false);
+              clearInterval(timer);
+            }
+          }, 1000);
+        }
+      } catch (err) {
+        setFormErrors({ submit: err.message || 'Registration failed' });
       }
     } else if (activeStep === 2) {
-      // Submit registration
       try {
-        setLoading(true);
-        setError('');
-        const result = await dispatch(register(formData));
-        if (!result.error) {
+        const result = await dispatch(verifyEmail({
+          userId,
+          otp: formData.verificationCode
+        })).unwrap();
+        
+        if (result.token) {
           navigate(redirectPath);
         }
       } catch (err) {
-        setError(err.response?.data?.message || 'Registration failed');
-      } finally {
-        setLoading(false);
+        setFormErrors({ verificationCode: err.message || 'Verification failed' });
       }
-      return;
     }
-    setActiveStep((prev) => prev + 1);
-    setError('');
   };
 
   const handleBack = () => {
@@ -120,6 +194,9 @@ const Register = () => {
               autoComplete="email"
               value={formData.email}
               onChange={handleChange}
+              error={!!formErrors.email}
+              helperText={formErrors.email}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <TextField
               margin="normal"
@@ -127,10 +204,25 @@ const Register = () => {
               fullWidth
               name="password"
               label="Password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               id="password"
               value={formData.password}
               onChange={handleChange}
+              error={!!formErrors.password}
+              helperText={formErrors.password}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <TextField
               margin="normal"
@@ -138,10 +230,13 @@ const Register = () => {
               fullWidth
               name="confirmPassword"
               label="Confirm Password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               id="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
+              error={!!formErrors.confirmPassword}
+              helperText={formErrors.confirmPassword}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Box>
         );
@@ -157,6 +252,9 @@ const Register = () => {
               name="firstName"
               value={formData.firstName}
               onChange={handleChange}
+              error={!!formErrors.firstName}
+              helperText={formErrors.firstName}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <TextField
               margin="normal"
@@ -167,6 +265,22 @@ const Register = () => {
               name="lastName"
               value={formData.lastName}
               onChange={handleChange}
+              error={!!formErrors.lastName}
+              helperText={formErrors.lastName}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="username"
+              label="Username"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              error={!!formErrors.username}
+              helperText={formErrors.username || "This will be your display name"}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
             <TextField
               margin="normal"
@@ -176,6 +290,7 @@ const Register = () => {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Box>
         );
@@ -194,6 +309,9 @@ const Register = () => {
               name="verificationCode"
               value={formData.verificationCode}
               onChange={handleChange}
+              error={!!formErrors.verificationCode}
+              helperText={formErrors.verificationCode}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
           </Box>
         );
@@ -223,7 +341,7 @@ const Register = () => {
               fullWidth
               variant="outlined"
               onClick={handleGoogleSignup}
-              startIcon={<i className="fab fa-google" />}
+              startIcon={<GoogleIcon />}
               sx={{ 
                 borderColor: '#DB4437', 
                 color: '#DB4437',
@@ -240,7 +358,7 @@ const Register = () => {
               fullWidth
               variant="outlined"
               onClick={handleGithubSignup}
-              startIcon={<i className="fab fa-github" />}
+              startIcon={<GitHubIcon />}
               sx={{ 
                 borderColor: '#333',
                 color: '#333',

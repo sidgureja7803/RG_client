@@ -358,4 +358,17 @@ const calculateATSScore = (resumeData, matchedKeywordsCount) => {
   // Calculate final score
   const finalScore = Math.min(baseScore + bonusPoints, 100);
   return finalScore;
+};
+
+export const analyzeResumeMatch = async (formData) => {
+  try {
+    const response = await api.post('/api/analyzer/match', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
 }; 

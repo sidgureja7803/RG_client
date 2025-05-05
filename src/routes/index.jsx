@@ -16,6 +16,7 @@ import Privacy from '../pages/Privacy';
 import NotFound from '../pages/NotFound';
 import OAuthCallback from '../pages/OAuthCallback';
 import ResumeAnalyzerPage from '../pages/ResumeAnalyzerPage';
+import ResumeAnalyzer from '../pages/ResumeAnalyzer';
 import ProtectedRoute from '../components/ProtectedRoute';
 
 const AppRoutes = () => {
@@ -40,6 +41,7 @@ const AppRoutes = () => {
         <Route path="/resume-editor/:resumeId" element={<ResumeEditor />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/analyzer/:resumeId" element={<ResumeAnalyzerPage />} />
+        <Route path="/analyzer" element={<ResumeAnalyzer />} />
       </Route>
       
       {/* 404 Route */}

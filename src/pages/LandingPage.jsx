@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './LandingPage.css';
+import { Link } from 'react-router-dom';
 
 // Import icons
 import { ArrowRight, Check, ChevronDown, FileText, Search, Award, Zap, BarChart } from 'lucide-react';
@@ -190,8 +191,8 @@ const LandingPage = () => {
           <a href="#" onClick={(e) => { e.preventDefault(); scrollToSection('pricing'); }}>Pricing</a>
         </nav>
         <div className="auth-buttons">
-          <button className="btn btn-secondary">Log in</button>
-          <button className="btn btn-primary">Sign up</button>
+          <Link to="/login" className="btn btn-secondary">Log in</Link>
+          <Link to="/register" className="btn btn-primary">Sign up</Link>
         </div>
       </header>
 
