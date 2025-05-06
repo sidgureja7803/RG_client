@@ -48,8 +48,21 @@ export const login = createAsyncThunk(
   'auth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      // Skip Firebase authentication for now due to configuration issues
-      // Just use our backend API
+      // Try to use Firebase authentication
+      try {
+        const firebaseUser = await firebaseAuthService.signInWithEmailPassword(email, password);
+        
+        // If Firebase login succeeds, authenticate with the backend
+        if (firebaseUser) {
+          const data = await authService.login(email, password);
+          return data;
+        }
+      } catch (firebaseErr) {
+        console.error("Firebase login error:", firebaseErr);
+        // Fall back to backend authentication
+      }
+      
+      // Use backend authentication
       const data = await authService.login(email, password);
       return data;
     } catch (error) {
@@ -64,8 +77,27 @@ export const loginWithGoogle = createAsyncThunk(
   'auth/loginWithGoogle',
   async (_, { rejectWithValue }) => {
     try {
-      // Temporarily redirect to the Google OAuth endpoint from our backend
-      window.location.href = `${import.meta.env.VITE_API_URL || ''}/auth/google`;
+      // Use Firebase authentication for Google login
+      const firebaseUser = await firebaseAuthService.signInWithGoogle();
+      
+      // If we have a Firebase user, use their token to authenticate with our backend
+      if (firebaseUser) {
+        // Return the Firebase user data - no need for token since we're handling authentication in our app
+        return {
+          user: {
+            ...firebaseUser,
+            firstName: firebaseUser.displayName?.split(' ')[0] || '',
+            lastName: firebaseUser.displayName?.split(' ')[1] || '',
+            profilePicture: firebaseUser.photoURL
+          },
+          token: 'firebase-authenticated' // Placeholder token since we're not using Firebase tokens for backend
+        };
+      }
+      
+      // Fallback to direct OAuth flow if Firebase auth fails
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      localStorage.setItem('redirectAfterAuth', window.location.pathname);
+      window.location.href = `${baseUrl}/auth/google`;
       return {};
     } catch (error) {
       return rejectWithValue(error.message || 'Google login failed');
@@ -78,8 +110,27 @@ export const loginWithGithub = createAsyncThunk(
   'auth/loginWithGithub',
   async (_, { rejectWithValue }) => {
     try {
-      // Temporarily redirect to the GitHub OAuth endpoint from our backend
-      window.location.href = `${import.meta.env.VITE_API_URL || ''}/auth/github`;
+      // Use Firebase authentication for GitHub login
+      const firebaseUser = await firebaseAuthService.signInWithGithub();
+      
+      // If we have a Firebase user, use their token to authenticate with our backend
+      if (firebaseUser) {
+        // Return the Firebase user data - no need for token since we're handling authentication in our app
+        return {
+          user: {
+            ...firebaseUser,
+            firstName: firebaseUser.displayName?.split(' ')[0] || '',
+            lastName: firebaseUser.displayName?.split(' ')[1] || '',
+            profilePicture: firebaseUser.photoURL
+          },
+          token: 'firebase-authenticated' // Placeholder token since we're not using Firebase tokens for backend
+        };
+      }
+      
+      // Fallback to direct OAuth flow if Firebase auth fails
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      localStorage.setItem('redirectAfterAuth', window.location.pathname);
+      window.location.href = `${baseUrl}/auth/github`;
       return {};
     } catch (error) {
       return rejectWithValue(error.message || 'GitHub login failed');
@@ -92,6 +143,14 @@ export const logout = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
+      // Try to sign out from Firebase first
+      try {
+        await firebaseAuthService.signOut();
+      } catch (firebaseErr) {
+        console.error("Firebase logout error:", firebaseErr);
+      }
+      
+      // Then sign out from our backend
       await authService.logout();
       return null;
     } catch (error) {

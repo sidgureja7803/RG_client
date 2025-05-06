@@ -27,6 +27,7 @@ import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/firebaseConfig';
+import firebaseAuthService from '../services/firebaseAuth.service';
 
 // Steps for manual registration
 const steps = ['Account Details', 'Personal Information', 'Verification'];
@@ -143,6 +144,34 @@ const Register = () => {
       if (activeStep === 0) {
         setActiveStep(1);
       } else if (activeStep === 1) {
+        // Try Firebase registration first if email/password are provided
+        if (formData.email && formData.password) {
+          try {
+            // Register user in Firebase
+            await firebaseAuthService.registerWithEmailPassword(
+              formData.email, 
+              formData.password, 
+              {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                profilePicture: null
+              }
+            );
+            
+            // If Firebase registration succeeds, show a success message
+            setSnackbarMessage('Account created successfully! Please verify your email.');
+            setSnackbarOpen(true);
+            
+            // Skip to verification step for Firebase users
+            setActiveStep(2);
+            return;
+          } catch (firebaseErr) {
+            console.error("Firebase registration error:", firebaseErr);
+            // Fall back to backend registration if Firebase fails
+          }
+        }
+        
+        // Default to backend registration
         const result = await dispatch(register({
           email: formData.email,
           password: formData.password,
@@ -217,8 +246,13 @@ const Register = () => {
 
   const handleGoogleSignup = async () => {
     try {
-      await dispatch(loginWithGoogle()).unwrap();
-      navigate(redirectPath);
+      const result = await dispatch(loginWithGoogle()).unwrap();
+      
+      // If we have a result with token, navigate to dashboard
+      if (result && result.token) {
+        navigate(redirectPath);
+      }
+      // If not, the page will be redirected to OAuth flow
     } catch (err) {
       setFormErrors({ submit: err.message || 'Google signup failed' });
     }
@@ -226,8 +260,13 @@ const Register = () => {
 
   const handleGithubSignup = async () => {
     try {
-      await dispatch(loginWithGithub()).unwrap();
-      navigate(redirectPath);
+      const result = await dispatch(loginWithGithub()).unwrap();
+      
+      // If we have a result with token, navigate to dashboard
+      if (result && result.token) {
+        navigate(redirectPath);
+      }
+      // If not, the page will be redirected to OAuth flow
     } catch (err) {
       setFormErrors({ submit: err.message || 'GitHub signup failed' });
     }

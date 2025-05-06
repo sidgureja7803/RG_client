@@ -18,6 +18,8 @@ import {
   Snackbar,
   Slide
 } from '@mui/material';
+
+
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -26,6 +28,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import { login, verifyEmail, loginWithGoogle, loginWithGithub } from '../redux/actions/authActions';
 import { Link as RouterLink } from 'react-router-dom';
+import firebaseAuthService from '../services/firebaseAuth.service';
 
 const Login = () => {
   const theme = useTheme();
@@ -50,6 +53,7 @@ const Login = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [showResetField, setShowResetField] = useState(false);
+
 
   const handleChange = (e) => {
     setFormData({
@@ -89,25 +93,27 @@ const Login = () => {
       }
     } catch (err) {
       console.error("Login error:", err);
-      setFormError(err.message || 'An error occurred during login');
+      setFormError(err.message || 'Invalid email or password');
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
-      await dispatch(loginWithGoogle()).unwrap();
-      // Navigation is handled by the redirect
+      // Redirect to backend Google OAuth route
+      window.location.href = `${process.env.REACT_APP_API_URL}/api/auth/google`;
     } catch (err) {
-      setFormError(err.message || 'Google login failed');
+      console.error('Google login error:', err);
+      setFormError('Google login failed. Please try again.');
     }
   };
 
   const handleGithubLogin = async () => {
     try {
-      await dispatch(loginWithGithub()).unwrap();
-      // Navigation is handled by the redirect
+      // Redirect to backend GitHub OAuth route
+      window.location.href = `${process.env.REACT_APP_API_URL}/api/auth/github`;
     } catch (err) {
-      setFormError(err.message || 'GitHub login failed');
+      console.error('GitHub login error:', err);
+      setFormError('GitHub login failed. Please try again.');
     }
   };
 
@@ -118,15 +124,25 @@ const Login = () => {
     }
     
     try {
-      // Temporarily disable Firebase reset password
-      // await firebaseAuthService.resetPassword(resetEmail);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: resetEmail }),
+      });
+
+      const data = await response.json();
       
-      // Show a message saying this feature is temporarily disabled
-      setSnackbarMessage('Password reset is temporarily disabled. Please contact support.');
-      setSnackbarOpen(true);
-      setShowResetField(false);
+      if (response.ok) {
+        setSnackbarMessage('Password reset email sent. Please check your inbox.');
+        setSnackbarOpen(true);
+        setShowResetField(false);
+      } else {
+        setFormError(data.message || 'Failed to send reset email');
+      }
     } catch (err) {
-      setFormError(err.message || 'Failed to send reset email');
+      setFormError('Failed to send reset email. Please try again.');
     }
   };
 

@@ -1,151 +1,84 @@
-# ResumeForge - Professional Resume Builder
+# Resume Generator Client
 
-![ResumeForge Banner](https://via.placeholder.com/1200x300)
+This is the client-side application for the Resume Generator platform. It provides a user interface for creating, analyzing, and managing resumes.
 
-## 📋 Project Overview
+## Features
 
-ResumeForge is a modern, feature-rich resume builder application designed to help job seekers create professional, ATS-optimized resumes in minutes. This project was built for the [Hackathon Name] and focuses on replicating and enhancing existing resume builder functionality.
+- Create and customize resumes using templates or code editor
+- Analyze resumes against job descriptions for matching scores
+- Calculate ATS compatibility scores
+- Markdown-based resume editor with live preview
+- Export resumes to PDF
 
-### 🌟 Key Features
-
-- **Advanced ATS Optimization** - Real-time analysis of how your resume performs with Applicant Tracking Systems
-- **Job Description Matcher** - Paste job descriptions to see how well your resume matches and get suggestions
-- **AI Content Assistant** - Get help crafting compelling bullet points and descriptions
-- **Customizable Templates** - Choose from professionally designed templates with full customization
-- **Expert Feedback** - Receive section-by-section recommendations to improve content and formatting
-- **Multiple Export Formats** - Export as PDF, DOCX, or plain text, share to LinkedIn or via email
-
-## 🚀 Live Demo
-
-Check out the live demo: [ResumeForge App](https://your-deployment-url.com)
-
-## 🛠️ Technologies Used
-
-- **Frontend Framework:** React
-- **Animation Libraries:** GSAP, Three.js
-- **Routing:** React Router
-- **Styling:** CSS with responsive design
-- **Icons:** Font Awesome
-- **Deployment:** Vercel/Netlify
-
-## 📸 Screenshots
-
-<div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
-  <img src="https://via.placeholder.com/400x250" alt="Landing Page" width="45%">
-  <img src="https://via.placeholder.com/400x250" alt="Resume Builder Interface" width="45%">
-  <img src="https://via.placeholder.com/400x250" alt="Template Selection" width="45%">
-  <img src="https://via.placeholder.com/400x250" alt="ATS Analysis" width="45%">
-</div>
-
-## ✨ Enhancements Added
-
-This project builds upon traditional resume builders by adding:
-
-1. **AI Resume Analyzer & ATS Optimization Tool**
-   - Analyzes resumes against job descriptions
-   - Provides keyword matching and optimization suggestions
-   - Gives a visual match score with detailed metrics
-   - Offers section-by-section recommendations
-
-2. **Interactive Resume Comparison**
-   - Create and compare multiple versions side-by-side
-   - See differences highlighted for quick comparisons
-   - Analytics on which version performs better for different job types
-
-3. **Interactive 3D Document Visualization**
-   - Three.js powered document visualization
-   - Engaging user experience with modern animations
-
-## 🏗️ Project Structure
-
-```
-resume-forge/
-├── public/
-│   ├── index.html
-│   └── assets/
-├── src/
-│   ├── components/
-│   │   ├── LandingPage/
-│   │   │   ├── LandingPage.jsx
-│   │   │   └── LandingPage.css
-│   │   ├── Auth/
-│   │   │   ├── Login.jsx
-│   │   │   └── Signup.jsx
-│   │   ├── Dashboard/
-│   │   │   └── Dashboard.jsx
-│   │   ├── ResumeBuilder/
-│   │   │   ├── Builder.jsx
-│   │   │   ├── TemplateSelector.jsx
-│   │   │   ├── ContentEditor.jsx
-│   │   │   └── AtsAnalyzer.jsx
-│   │   └── common/
-│   │       ├── Navbar.jsx
-│   │       └── Footer.jsx
-│   ├── assets/
-│   ├── hooks/
-│   ├── utils/
-│   ├── App.js
-│   ├── index.js
-│   └── App.css
-├── package.json
-└── README.md
-```
-
-## 🚦 Getting Started
+## Setup Instructions
 
 ### Prerequisites
 
-- Node.js (v16 or later)
-- npm or yarn
+- Node.js (v16.x or higher)
+- Server component running (see server directory)
 
 ### Installation
 
-1. Clone the repository
+1. Navigate to the client directory:
    ```bash
-   git clone https://github.com/yourusername/resume-forge.git
-   cd resume-forge
+   cd client
    ```
 
-2. Install dependencies
+2. Install dependencies:
    ```bash
    npm install
-   # or
-   yarn install
    ```
 
-3. Start the development server
+3. Create a `.env` file in the root directory with the following content:
+   ```
+   VITE_API_URL=http://localhost:5000/api
+   ```
+
+4. Start the development server:
    ```bash
-   npm start
-   # or
-   yarn start
+   npm run dev
    ```
 
-4. Open [http://localhost:3000](http://localhost:3000) to view the app in your browser
+5. Access the application at `http://localhost:5173`
 
-## 🔍 Additional Features Planned
+## Using the Resume Analyzer
 
-- [ ] LinkedIn profile import
-- [ ] Cover letter generator
-- [ ] Interview preparation tools
-- [ ] Job application tracker
-- [ ] Industry-specific content libraries
+1. Navigate to the Analyzer page (http://localhost:5173/analyzer)
+2. Upload your resume (supported formats: PDF, DOC, DOCX, TXT)
+3. Paste the job description in the text area
+4. Click "Analyze Match" to get results
+5. View your match score, ATS compatibility, and recommendations
 
-## 👨‍💻 Developer Notes
+## Troubleshooting
 
-This project was created for [Hackathon Name] within a timeframe of [duration]. The focus was on replicating an existing resume builder website while adding innovative features to enhance its functionality.
+### Resume Analysis Not Working
 
-Key challenges included:
-- Implementing the ATS optimization algorithm
-- Creating efficient state management for multiple resume versions
-- Building performant Three.js visualizations
+If the resume analysis feature is not working:
 
-## 📄 License
+1. Check that the server component is running
+2. Ensure the API URL is correctly configured in your `.env` file
+3. Verify that your server has a valid Gemini API key configured
+4. Check browser console for any error messages
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+### Markdown Editor Issues
 
-## 🙏 Acknowledgements
+If the code-based resume editor is not functioning correctly:
 
-- [Font Awesome](https://fontawesome.com/) for the icons
-- [Three.js](https://threejs.org/) for 3D visualizations
-- [GSAP](https://greensock.com/gsap/) for animations
-- [React Router](https://reactrouter.com/) for navigation
+1. Ensure all dependencies are installed
+2. Try clearing your browser cache
+3. Check for JavaScript console errors
+
+## Development
+
+### Building for Production
+
+1. Build the application:
+   ```bash
+   npm run build
+   ```
+
+2. The build output will be in the `dist` directory
+
+## License
+
+[MIT](LICENSE)

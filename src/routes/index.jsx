@@ -19,6 +19,7 @@ import ResumeAnalyzerPage from '../pages/ResumeAnalyzerPage';
 import ResumeAnalyzer from '../pages/ResumeAnalyzer';
 import TemplateManager from '../pages/admin/TemplateManager';
 import ProtectedRoute from '../components/ProtectedRoute';
+import CodeResumePage from '../pages/CodeResumePage';
 
 const AppRoutes = () => {
   return (
@@ -34,6 +35,8 @@ const AppRoutes = () => {
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/oauth/callback" element={<OAuthCallback />} />
+      <Route path="/code-resume" element={<CodeResumePage />} />
+      <Route path="/code-resume/:id" element={<CodeResumePage />} />
       
       {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>

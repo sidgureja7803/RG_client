@@ -362,13 +362,64 @@ const calculateATSScore = (resumeData, matchedKeywordsCount) => {
 
 export const analyzeResumeMatch = async (formData) => {
   try {
+    // Add loading delay for better user experience
+    const startTime = Date.now();
+    
     const response = await api.post('/api/analyzer/match', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 60000, // Extend timeout to 60 seconds for AI processing
     });
-    return response.data;
+    
+    // Ensure minimum loading time of 1.5 seconds for better UX
+    const elapsedTime = Date.now() - startTime;
+    if (elapsedTime < 1500) {
+      await new Promise(resolve => setTimeout(resolve, 1500 - elapsedTime));
+    }
+    
+    // Check if response contains expected data
+    if (!response.data || typeof response.data !== 'object') {
+      throw new Error('Invalid response from server');
+    }
+    
+    // Fill in defaults for missing data
+    const result = {
+      matchScore: response.data.matchScore || 0,
+      matchedSkills: response.data.matchedSkills || [],
+      missingSkills: response.data.missingSkills || [],
+      recommendations: response.data.recommendations || 'No specific recommendations available.',
+      atsScore: response.data.atsScore || null,
+      atsDetails: response.data.atsDetails || null
+    };
+    
+    return result;
   } catch (error) {
-    throw error.response?.data || error;
+    console.error('Resume analysis error:', error);
+    
+    // Provide more helpful error messages
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      if (error.response.status === 413) {
+        throw new Error('Resume file is too large. Please upload a smaller file (max 5MB).');
+      } else if (error.response.status === 415) {
+        throw new Error('Invalid file format. Please upload a PDF, DOC, DOCX, or TXT file.');
+      } else if (error.response.status === 429) {
+        throw new Error('Too many requests. Please try again later.');
+      } else if (error.response.status >= 500) {
+        throw new Error('Server error. Our team has been notified and is working on a fix.');
+      } else if (error.response.data && error.response.data.message) {
+        throw new Error(error.response.data.message);
+      }
+    } else if (error.request) {
+      // The request was made but no response was received
+      throw new Error('No response from server. Please check your internet connection and try again.');
+    } else if (error.code === 'ECONNABORTED') {
+      throw new Error('Analysis request timed out. The server might be busy, please try again later.');
+    }
+    
+    // General error
+    throw error.message ? error : new Error('Failed to analyze resume. Please try again later.');
   }
 }; 

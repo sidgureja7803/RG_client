@@ -227,4 +227,133 @@ const updateMockResume = (id, resumeData) => {
 
 const deleteMockResume = (id) => {
   return { message: `Resume with ID ${id} deleted successfully (mock)` };
+};
+
+/**
+ * Save a resume
+ * @param {Object} resumeData Resume data object
+ * @param {string} resumeData.id Optional resume ID for update
+ * @param {string} resumeData.title Resume title
+ * @param {string} resumeData.content Resume content
+ * @param {string} resumeData.format Content format (html, markdown, json)
+ * @returns {Promise<Object>} Saved resume data
+ */
+export const saveResume = async (resumeData) => {
+  try {
+    let response;
+    
+    if (resumeData.id) {
+      // Update existing resume
+      response = await api.put(`/api/resumes/${resumeData.id}`, resumeData);
+    } else {
+      // Create new resume
+      response = await api.post('/api/resumes', resumeData);
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error saving resume:', error);
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Export resume as PDF
+ * @param {string} id Resume ID
+ * @returns {Promise<Blob>} PDF file as Blob
+ */
+export const exportResumePDF = async (id) => {
+  try {
+    const response = await api.get(`/api/resumes/${id}/export`, {
+      responseType: 'blob'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error exporting resume as PDF:', error);
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Export resume as markdown text
+ * @param {string} id Resume ID
+ * @returns {Promise<string>} Markdown text
+ */
+export const exportResumeMarkdown = async (id) => {
+  try {
+    const response = await api.get(`/api/resumes/${id}/export-markdown`);
+    return response.data.markdown;
+  } catch (error) {
+    console.error('Error exporting resume as markdown:', error);
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Share resume with another user
+ * @param {string} id Resume ID
+ * @param {string} email Email to share with
+ * @returns {Promise<Object>} Response data
+ */
+export const shareResume = async (id, email) => {
+  try {
+    const response = await api.post(`/api/resumes/${id}/share`, { email });
+    return response.data;
+  } catch (error) {
+    console.error('Error sharing resume:', error);
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Get a public shareable link for a resume
+ * @param {string} id Resume ID
+ * @returns {Promise<string>} Shareable link
+ */
+export const getShareableLink = async (id) => {
+  try {
+    const response = await api.get(`/api/resumes/${id}/share-link`);
+    return response.data.shareLink;
+  } catch (error) {
+    console.error('Error generating shareable link:', error);
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Parse an uploaded resume file
+ * @param {File} file Resume file (PDF, DOCX, etc.)
+ * @returns {Promise<Object>} Parsed resume data
+ */
+export const parseResumeFile = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('resume', file);
+    
+    const response = await api.post('/api/resumes/parse', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error parsing resume file:', error);
+    throw error.response?.data || error;
+  }
+};
+
+/**
+ * Convert markdown resume to HTML
+ * @param {string} markdown Markdown content
+ * @returns {Promise<string>} HTML content
+ */
+export const convertMarkdownToHTML = async (markdown) => {
+  try {
+    const response = await api.post('/api/resumes/convert-markdown', { markdown });
+    return response.data.html;
+  } catch (error) {
+    console.error('Error converting markdown to HTML:', error);
+    throw error.response?.data || error;
+  }
 }; 
