@@ -144,34 +144,7 @@ const Register = () => {
       if (activeStep === 0) {
         setActiveStep(1);
       } else if (activeStep === 1) {
-        // Try Firebase registration first if email/password are provided
-        if (formData.email && formData.password) {
-          try {
-            // Register user in Firebase
-            await firebaseAuthService.registerWithEmailPassword(
-              formData.email, 
-              formData.password, 
-              {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                profilePicture: null
-              }
-            );
-            
-            // If Firebase registration succeeds, show a success message
-            setSnackbarMessage('Account created successfully! Please verify your email.');
-            setSnackbarOpen(true);
-            
-            // Skip to verification step for Firebase users
-            setActiveStep(2);
-            return;
-          } catch (firebaseErr) {
-            console.error("Firebase registration error:", firebaseErr);
-            // Fall back to backend registration if Firebase fails
-          }
-        }
-        
-        // Default to backend registration
+        // Register user with backend API
         const result = await dispatch(register({
           email: formData.email,
           password: formData.password,
@@ -182,38 +155,14 @@ const Register = () => {
         })).unwrap();
         
         if (result.userId) {
-          setUserId(result.userId);
-          setActiveStep(2);
-          // Start resend timer
-          setResendDisabled(true);
-          let timeLeft = 60;
-          setResendTimer(timeLeft);
-          const timer = setInterval(() => {
-            timeLeft -= 1;
-            setResendTimer(timeLeft);
-            if (timeLeft === 0) {
-              setResendDisabled(false);
-              clearInterval(timer);
-            }
-          }, 1000);
-        }
-      } else if (activeStep === 2) {
-        const result = await dispatch(verifyEmail({
-          userId,
-          otp: formData.verificationCode
-        })).unwrap();
-        
-        if (result.token) {
-          setSnackbarMessage('Account verified successfully! Redirecting to dashboard...');
+          setSnackbarMessage('Account created successfully! Please verify your email.');
           setSnackbarOpen(true);
-          
-          setTimeout(() => {
-            navigate(redirectPath);
-          }, 1500);
+          setActiveStep(2);
         }
       }
-    } catch (err) {
-      setFormErrors({ submit: err.message || 'An error occurred' });
+    } catch (error) {
+      console.error('Registration error:', error);
+      setFormErrors({ submit: error.message || 'Registration failed. Please try again.' });
     }
   };
 

@@ -7,6 +7,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 15000, // 15 seconds
+  withCredentials: true // Enable sending cookies with requests
 });
 
 // Request interceptor for adding auth token to requests
@@ -25,8 +26,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Handle network errors
+    if (!error.response) {
+      console.error('Network error:', error);
+      return Promise.reject(new Error('Network error. Please check your connection.'));
+    }
+
     // Handle auth errors
-    if (error.response && error.response.status === 401) {
+    if (error.response.status === 401) {
       // Clear local storage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -37,12 +44,18 @@ api.interceptors.response.use(
       }
     }
     
-    // Handle server errors
-    if (error.response && error.response.status >= 500) {
-      console.error('Server error:', error.response);
+    // Handle validation errors
+    if (error.response.status === 400) {
+      return Promise.reject(error.response.data);
     }
     
-    return Promise.reject(error);
+    // Handle server errors
+    if (error.response.status >= 500) {
+      console.error('Server error:', error.response);
+      return Promise.reject(new Error('Server error. Please try again later.'));
+    }
+    
+    return Promise.reject(error.response.data);
   }
 );
 

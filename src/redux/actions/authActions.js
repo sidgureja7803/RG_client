@@ -7,12 +7,10 @@ export const register = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
-      // For now, we'll skip Firebase registration due to configuration issues
-      // and just use our backend API
       const response = await authService.register(userData);
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Registration failed');
+      return rejectWithValue(error.message || 'Registration failed');
     }
   }
 );
@@ -25,7 +23,7 @@ export const verifyEmail = createAsyncThunk(
       const response = await authService.verifyEmail(userId, otp);
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Verification failed');
+      return rejectWithValue(error.message || 'Verification failed');
     }
   }
 );
@@ -38,7 +36,7 @@ export const resendOTP = createAsyncThunk(
       const response = await authService.resendOTP(userId);
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to resend verification code');
+      return rejectWithValue(error.message || 'Failed to resend verification code');
     }
   }
 );
@@ -48,26 +46,24 @@ export const login = createAsyncThunk(
   'auth/login',
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      // Try to use Firebase authentication
-      try {
-        const firebaseUser = await firebaseAuthService.signInWithEmailPassword(email, password);
-        
-        // If Firebase login succeeds, authenticate with the backend
-        if (firebaseUser) {
-          const data = await authService.login(email, password);
-          return data;
-        }
-      } catch (firebaseErr) {
-        console.error("Firebase login error:", firebaseErr);
-        // Fall back to backend authentication
+      const response = await authService.login(email, password);
+      
+      // If login requires verification, return that info
+      if (response.requiresVerification) {
+        return {
+          userId: response.userId,
+          requiresVerification: true,
+          message: response.message
+        };
       }
       
-      // Use backend authentication
-      const data = await authService.login(email, password);
-      return data;
+      // Return the successful login data
+      return {
+        user: response.user,
+        token: response.token
+      };
     } catch (error) {
-      console.error("Login error in action:", error);
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      return rejectWithValue(error.message || 'Login failed');
     }
   }
 );
@@ -143,14 +139,6 @@ export const logout = createAsyncThunk(
   'auth/logout',
   async (_, { rejectWithValue }) => {
     try {
-      // Try to sign out from Firebase first
-      try {
-        await firebaseAuthService.signOut();
-      } catch (firebaseErr) {
-        console.error("Firebase logout error:", firebaseErr);
-      }
-      
-      // Then sign out from our backend
       await authService.logout();
       return null;
     } catch (error) {
@@ -164,10 +152,10 @@ export const getCurrentUser = createAsyncThunk(
   'auth/getCurrentUser',
   async (_, { rejectWithValue }) => {
     try {
-      const data = await authService.getCurrentUser();
-      return data;
+      const response = await authService.getCurrentUser();
+      return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to get user data');
+      return rejectWithValue(error.message || 'Failed to get user data');
     }
   }
 ); 

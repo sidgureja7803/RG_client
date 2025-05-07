@@ -100,7 +100,8 @@ const Login = () => {
   const handleGoogleLogin = async () => {
     try {
       // Redirect to backend Google OAuth route
-      window.location.href = `${process.env.REACT_APP_API_URL}/api/auth/google`;
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      window.location.href = `${baseUrl}/auth/google`;
     } catch (err) {
       console.error('Google login error:', err);
       setFormError('Google login failed. Please try again.');
@@ -110,7 +111,8 @@ const Login = () => {
   const handleGithubLogin = async () => {
     try {
       // Redirect to backend GitHub OAuth route
-      window.location.href = `${process.env.REACT_APP_API_URL}/api/auth/github`;
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      window.location.href = `${baseUrl}/auth/github`;
     } catch (err) {
       console.error('GitHub login error:', err);
       setFormError('GitHub login failed. Please try again.');

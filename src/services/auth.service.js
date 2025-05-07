@@ -4,14 +4,28 @@ class AuthService {
   async login(email, password) {
     try {
       const response = await api.post('/auth/login', { email, password });
-      if (response.data.token) {
+      
+      // Check if we have a successful response with token
+      if (response.data && response.data.token) {
+        // Store auth data
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data));
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return response.data;
       }
-      return response.data;
+      
+      // Handle verification required case
+      if (response.data && response.data.userId && !response.data.token) {
+        return {
+          userId: response.data.userId,
+          requiresVerification: true,
+          message: response.data.message
+        };
+      }
+      
+      throw new Error('Invalid response from server');
     } catch (error) {
       console.error("Login error:", error);
-      throw error;
+      throw error.response?.data || error;
     }
   }
 
@@ -21,22 +35,32 @@ class AuthService {
       return response.data;
     } catch (error) {
       console.error("Registration error:", error);
-      throw error;
+      throw error.response?.data || error;
     }
   }
 
   async verifyEmail(userId, otp) {
-    const response = await api.post('/auth/verify-email', { userId, otp });
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data));
+    try {
+      const response = await api.post('/auth/verify-email', { userId, otp });
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      return response.data;
+    } catch (error) {
+      console.error("Verification error:", error);
+      throw error.response?.data || error;
     }
-    return response.data;
   }
 
   async resendOTP(userId) {
-    const response = await api.post('/auth/resend-otp', { userId });
-    return response.data;
+    try {
+      const response = await api.post('/auth/resend-otp', { userId });
+      return response.data;
+    } catch (error) {
+      console.error("Resend OTP error:", error);
+      throw error.response?.data || error;
+    }
   }
 
   async loginWithGoogle(token) {
@@ -62,9 +86,14 @@ class AuthService {
     return response.data;
   }
 
-  async resetPassword(token, password) {
-    const response = await api.post('/auth/reset-password', { token, password });
-    return response.data;
+  async resetPassword(email) {
+    try {
+      const response = await api.post('/auth/reset-password', { email });
+      return response.data;
+    } catch (error) {
+      console.error("Reset password error:", error);
+      throw error.response?.data || error;
+    }
   }
 
   async updateProfile(userData) {
@@ -85,21 +114,38 @@ class AuthService {
     return response.data;
   }
 
-  logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-  }
-
-  getCurrentUser() {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      return JSON.parse(userStr);
+  async logout() {
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      return true;
+    } catch (error) {
+      console.error("Logout error:", error);
+      throw error;
     }
-    return null;
   }
 
-  isLoggedIn() {
-    return !!localStorage.getItem('token');
+  async getCurrentUser() {
+    try {
+      const response = await api.get('/auth/me');
+      return response.data;
+    } catch (error) {
+      console.error("Get current user error:", error);
+      throw error.response?.data || error;
+    }
+  }
+
+  getStoredUser() {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  }
+
+  getStoredToken() {
+    return localStorage.getItem('token');
+  }
+
+  isAuthenticated() {
+    return !!this.getStoredToken();
   }
 }
 
