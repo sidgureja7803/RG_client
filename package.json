@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/lang-json": "^6.0.1",
+    "@codemirror/lang-markdown": "^6.3.2",
+    "@codemirror/view": "^6.36.7",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.10",
@@ -17,7 +20,12 @@
     "@reduxjs/toolkit": "^2.2.1",
     "@studio-freight/lenis": "^1.0.42",
     "@studio-freight/react-lenis": "^0.0.47",
+    "@uiw/codemirror-theme-github": "^4.23.12",
+    "@uiw/codemirror-theme-vscode": "^4.23.12",
+    "@uiw/react-codemirror": "^4.23.12",
     "axios": "^1.6.7",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
     "firebase": "^11.6.1",
     "framer-motion": "^11.0.3",
     "gsap": "^3.12.5",
