@@ -1,44 +1,46 @@
-import { useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
+import { useEffect, useState } from 'react';
+import io from 'socket.io-client';
 import { useSelector } from 'react-redux';
 
+const SOCKET_SERVER_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
+
 export const useSocket = () => {
-  const socketRef = useRef(null);
+  const [socket, setSocket] = useState(null);
   const { token } = useSelector(state => state.auth);
 
   useEffect(() => {
     if (!token) return;
 
-    // Initialize socket connection with authentication
-    socketRef.current = io(import.meta.env.VITE_API_URL, {
+    const newSocket = io(SOCKET_SERVER_URL, {
       auth: { token },
       transports: ['websocket'],
       autoConnect: true,
     });
 
+    setSocket(newSocket);
+
     // Connection event handlers
-    socketRef.current.on('connect', () => {
+    newSocket.on('connect', () => {
       console.log('Socket connected');
     });
 
-    socketRef.current.on('connect_error', (error) => {
+    newSocket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
     });
 
-    socketRef.current.on('disconnect', (reason) => {
+    newSocket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
     });
 
     // Cleanup on unmount
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
+      if (newSocket) {
+        newSocket.close();
       }
     };
   }, [token]);
 
-  return socketRef.current;
+  return socket;
 };
 
 export default useSocket; 

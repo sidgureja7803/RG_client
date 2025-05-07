@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Grid, Paper, Typography, Button, Divider, TextField, CircularProgress, Menu, MenuItem, IconButton, Alert, Snackbar } from '@mui/material';
+import { Box, Grid, Paper, Typography, Button, Divider, TextField, CircularProgress, Menu, MenuItem, IconButton, Alert, Snackbar, Stack } from '@mui/material';
 import { Save, Download, Share, Code, RefreshCw, Settings, Copy, Trash2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -130,17 +130,40 @@ const CodeResumeEditor = () => {
   const [notification, setNotification] = useState({ open: false, message: '', type: 'info' });
   const [resumeId, setResumeId] = useState(null);
   const [dirty, setDirty] = useState(false);
+  const [previewError, setPreviewError] = useState(null);
   
   const user = useSelector(state => state.auth.user);
 
-  // Auto-save draft timer
+  // Validate markdown content
+  useEffect(() => {
+    try {
+      // Basic markdown validation
+      if (!markdown.trim()) {
+        setPreviewError('Content cannot be empty');
+        return;
+      }
+      
+      // Check for basic structure
+      if (!markdown.includes('#')) {
+        setPreviewError('Content must include at least one heading (#)');
+        return;
+      }
+      
+      setPreviewError(null);
+    } catch (error) {
+      setPreviewError('Invalid markdown content');
+    }
+  }, [markdown]);
+
+  // Auto-save with visual feedback
   useEffect(() => {
     let saveTimer;
     
     if (dirty) {
+      showNotification('Changes will be auto-saved...', 'info');
       saveTimer = setTimeout(() => {
         handleAutoSave();
-      }, 30000); // Auto-save after 30 seconds of inactivity
+      }, 3000); // Reduced to 3 seconds for better UX
     }
     
     return () => {
@@ -338,271 +361,157 @@ const CodeResumeEditor = () => {
   };
 
   return (
-    <Box sx={{ py: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" component="h1" fontWeight="medium">
-          Code Resume Editor
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<Code />}
-            onClick={handleTemplateMenuOpen}
-            size="small"
-          >
-            Templates
-          </Button>
-          <Menu
-            anchorEl={templateMenuAnchor}
-            open={Boolean(templateMenuAnchor)}
-            onClose={handleTemplateMenuClose}
-          >
-            <MenuItem onClick={() => applyTemplate('simple')}>Simple</MenuItem>
-            <MenuItem onClick={() => applyTemplate('technical')}>Technical</MenuItem>
-            <MenuItem onClick={() => applyTemplate('minimal')}>Minimal</MenuItem>
-          </Menu>
-
-          <Button
-            variant="outlined"
-            startIcon={<Settings />}
-            onClick={handleThemeMenuOpen}
-            size="small"
-          >
-            Theme
-          </Button>
-          <Menu
-            anchorEl={themeMenuAnchor}
-            open={Boolean(themeMenuAnchor)}
-            onClose={handleThemeMenuClose}
-          >
-            <MenuItem onClick={() => changeTheme('light')}>Light</MenuItem>
-            <MenuItem onClick={() => changeTheme('dark')}>Dark</MenuItem>
-          </Menu>
-
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <Save />}
-            onClick={handleSave}
-            disabled={saving || !dirty}
-            size="small"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={exporting ? <CircularProgress size={18} color="inherit" /> : <Download />}
-            onClick={handleExport}
-            disabled={exporting}
-            size="small"
-          >
-            {exporting ? 'Exporting...' : 'Export PDF'}
-          </Button>
-        </Box>
-      </Box>
-
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 2, 
-              borderRadius: 2,
-              height: 'calc(100vh - 160px)',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle1" fontWeight="medium">
-                Markdown Editor
-              </Typography>
-              <Box>
-                <IconButton size="small" onClick={handleCopyToClipboard} title="Copy to clipboard">
-                  <Copy size={18} />
-                </IconButton>
-                <IconButton size="small" onClick={handleClearEditor} title="Clear editor">
-                  <Trash2 size={18} />
-                </IconButton>
-              </Box>
-            </Box>
-            <Divider sx={{ mb: 2 }} />
-            <TextField
-              multiline
-              fullWidth
-              variant="outlined"
-              value={markdown}
-              onChange={handleCodeChange}
-              sx={{
-                flexGrow: 1,
-                '& .MuiInputBase-root': {
-                  fontFamily: 'monospace',
-                  fontSize: '0.9rem',
-                  height: '100%',
-                },
-                '& .MuiInputBase-input': {
-                  height: '100%',
-                }
-              }}
-              InputProps={{
-                style: {
-                  height: '100%',
-                }
-              }}
-            />
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 2, 
-              borderRadius: 2,
-              height: 'calc(100vh - 160px)',
-              overflowY: 'auto',
-              bgcolor: theme === 'dark' ? '#1e1e1e' : 'white',
-              color: theme === 'dark' ? 'white' : 'inherit'
-            }}
-          >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle1" fontWeight="medium" sx={{ color: theme === 'dark' ? 'white' : 'inherit' }}>
-                Resume Preview
-              </Typography>
-              <Box>
-                <IconButton 
-                  size="small" 
-                  onClick={() => changeTheme(theme === 'light' ? 'dark' : 'light')}
-                  sx={{ color: theme === 'dark' ? 'white' : 'inherit' }}
-                  title="Toggle light/dark theme"
-                >
-                  <RefreshCw size={18} />
-                </IconButton>
-              </Box>
-            </Box>
-            <Divider sx={{ mb: 2, borderColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
-            <Box 
-              id="resume-preview"
-              className="markdown-preview"
-              sx={{ 
-                p: 3, 
-                bgcolor: theme === 'dark' ? '#1e1e1e' : 'white',
-                color: theme === 'dark' ? '#e0e0e0' : 'inherit',
-                minHeight: 'calc(100% - 60px)',
-                '& h1': {
-                  color: theme === 'dark' ? '#58a6ff' : '#1976d2',
-                  borderBottom: theme === 'dark' ? '1px solid #333' : '1px solid #ddd',
-                  pb: 1
-                },
-                '& h2': {
-                  color: theme === 'dark' ? '#58a6ff' : '#0d47a1',
-                  borderBottom: theme === 'dark' ? '1px solid #333' : '1px solid #eee',
-                  pb: 0.5
-                },
-                '& h3, & h4, & h5, & h6': {
-                  color: theme === 'dark' ? '#e6edf3' : '#424242',
-                },
-                '& a': {
-                  color: theme === 'dark' ? '#58a6ff' : '#0277bd',
-                  textDecoration: 'none',
-                  '&:hover': {
-                    textDecoration: 'underline'
-                  }
-                },
-                '& p': {
-                  color: theme === 'dark' ? '#e0e0e0' : 'inherit',
-                },
-                '& ul, & ol': {
-                  paddingLeft: 3,
-                },
-                '& li': {
-                  margin: '4px 0',
-                },
-                '& hr': {
-                  border: 'none',
-                  height: '1px',
-                  backgroundColor: theme === 'dark' ? '#333' : '#ddd',
-                  margin: '16px 0',
-                },
-                '& blockquote': {
-                  borderLeft: theme === 'dark' ? '3px solid #555' : '3px solid #ddd',
-                  margin: 0,
-                  paddingLeft: 2,
-                  color: theme === 'dark' ? '#ccc' : '#666',
-                },
-                '& table': {
-                  borderCollapse: 'collapse',
-                  width: '100%',
-                },
-                '& th, & td': {
-                  border: theme === 'dark' ? '1px solid #333' : '1px solid #ddd',
-                  padding: '6px 12px',
-                },
-                '& th': {
-                  backgroundColor: theme === 'dark' ? '#333' : '#f5f5f5',
-                },
-                '& tr:nth-of-type(even)': {
-                  backgroundColor: theme === 'dark' ? '#222' : '#fafafa',
-                },
-                '& code': {
-                  fontFamily: 'monospace',
-                  backgroundColor: theme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-                  padding: '2px 4px',
-                  borderRadius: '3px',
-                  fontSize: '85%',
-                },
-                '& pre': {
-                  backgroundColor: theme === 'dark' ? '#2a2a2a' : '#f5f5f5',
-                  padding: 2,
-                  borderRadius: '4px',
-                  overflowX: 'auto',
-                },
-              }}
-            >
-              <ReactMarkdown
-                components={{
-                  code({ node, inline, className, children, ...props }) {
-                    const match = /language-(\w+)/.exec(className || '');
-                    return !inline && match ? (
-                      <SyntaxHighlighter
-                        style={theme === 'dark' ? atomDark : prism}
-                        language={match[1]}
-                        PreTag="div"
-                        {...props}
-                      >
-                        {String(children).replace(/\n$/, '')}
-                      </SyntaxHighlighter>
-                    ) : (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
-                  }
-                }}
+    <Grid container spacing={2} sx={{ height: '100vh', p: 2 }}>
+      {/* Editor Section */}
+      <Grid item xs={12} md={6}>
+        <Paper
+          elevation={3}
+          sx={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Button
+                startIcon={<Save />}
+                variant="contained"
+                onClick={handleSave}
+                disabled={saving || !dirty}
               >
-                {markdown}
-              </ReactMarkdown>
-            </Box>
-          </Paper>
-        </Grid>
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
+              
+              <Button
+                startIcon={<Download />}
+                onClick={handleExport}
+                disabled={exporting || !!previewError}
+              >
+                {exporting ? 'Exporting...' : 'Export PDF'}
+              </Button>
+              
+              <IconButton onClick={handleTemplateMenuOpen}>
+                <Code />
+              </IconButton>
+              
+              <IconButton onClick={handleThemeMenuOpen}>
+                <Settings />
+              </IconButton>
+              
+              <IconButton onClick={handleCopyToClipboard}>
+                <Copy />
+              </IconButton>
+              
+              <IconButton 
+                onClick={handleClearEditor}
+                color="error"
+                sx={{ ml: 'auto' }}
+              >
+                <Trash2 />
+              </IconButton>
+            </Stack>
+          </Box>
+
+          <TextField
+            multiline
+            fullWidth
+            value={markdown}
+            onChange={handleCodeChange}
+            variant="outlined"
+            sx={{
+              flex: 1,
+              '& .MuiInputBase-root': {
+                height: '100%',
+                fontFamily: 'monospace',
+                fontSize: '14px',
+                '& textarea': {
+                  height: '100% !important',
+                },
+              },
+            }}
+            error={!!previewError}
+            helperText={previewError}
+          />
+        </Paper>
       </Grid>
-      
+
+      {/* Preview Section */}
+      <Grid item xs={12} md={6}>
+        <Paper
+          elevation={3}
+          sx={{
+            height: '100%',
+            overflow: 'auto',
+            p: 3,
+            bgcolor: theme === 'dark' ? '#1a1a1a' : 'white',
+            color: theme === 'dark' ? 'white' : 'inherit',
+          }}
+        >
+          <ReactMarkdown
+            components={{
+              code: ({ node, inline, className, children, ...props }) => {
+                const match = /language-(\w+)/.exec(className || '');
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    style={theme === 'dark' ? atomDark : prism}
+                    language={match[1]}
+                    PreTag="div"
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+            }}
+          >
+            {markdown}
+          </ReactMarkdown>
+        </Paper>
+      </Grid>
+
+      {/* Template Menu */}
+      <Menu
+        anchorEl={templateMenuAnchor}
+        open={Boolean(templateMenuAnchor)}
+        onClose={handleTemplateMenuClose}
+      >
+        <MenuItem onClick={() => applyTemplate('simple')}>Simple Template</MenuItem>
+        <MenuItem onClick={() => applyTemplate('technical')}>Technical Template</MenuItem>
+        <MenuItem onClick={() => applyTemplate('minimal')}>Minimal Template</MenuItem>
+      </Menu>
+
+      {/* Theme Menu */}
+      <Menu
+        anchorEl={themeMenuAnchor}
+        open={Boolean(themeMenuAnchor)}
+        onClose={handleThemeMenuClose}
+      >
+        <MenuItem onClick={() => changeTheme('light')}>Light Theme</MenuItem>
+        <MenuItem onClick={() => changeTheme('dark')}>Dark Theme</MenuItem>
+      </Menu>
+
+      {/* Notifications */}
       <Snackbar
         open={notification.open}
-        autoHideDuration={5000}
+        autoHideDuration={3000}
         onClose={handleCloseNotification}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={handleCloseNotification} 
+        <Alert
+          onClose={handleCloseNotification}
           severity={notification.type}
           variant="filled"
-          sx={{ width: '100%' }}
         >
           {notification.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </Grid>
   );
 };
 
